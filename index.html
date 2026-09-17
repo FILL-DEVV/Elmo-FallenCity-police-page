@@ -762,7 +762,7 @@
 <div class="titlebar">
   <span class="dot"></span>
   <span class="fname">callsign-log.xlsx</span>
-  <span class="fsub" id="saved-indicator">saved locally</span>
+  <span class="fsub" id="saved-indicator">connecting…</span>
   <button id="clear-all-btn" type="button" style="margin-left:14px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Clear all data</button>
 </div>
 <div class="formulabar" style="position:relative;">
@@ -938,7 +938,7 @@
 
 </div>
 
-<div class="foot-note">Data is stored only in this browser. Nothing is sent anywhere. Not affiliated with NSW Police Force.</div>
+<div class="foot-note">Shared roster — everyone with this link sees and edits the same data. Not affiliated with NSW Police Force.</div>
 
 <div class="promote-pop" id="promote-pop">
   <div class="promote-pop-head">Promote / transfer</div>
@@ -988,8 +988,18 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
+  /* ---------- Supabase (shared multi-user backend) ----------
+     Everyone who opens this page reads/writes the same data here —
+     there is no more per-browser localStorage roster. Phase 1 uses
+     open access (the publishable key can read/write everything);
+     Phase 2 will layer Discord-role-based permissions on top. */
+  const SUPABASE_URL = "https://pxedimvexqywvxwyoiom.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_GpxMXE0Yf8C1ujcLi08akQ_l2ZcLcGa";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const RANKS = [
     "Commissioner","Deputy Commissioner","Assistant Commissioner",
     "Chief Superintendent","Superintendent","Chief Inspector",
@@ -1083,60 +1093,95 @@
   };
   const DIVISION_KEYS = Object.keys(DIVISIONS);
 
-  const STORAGE_KEY = "nsw-callsign-log-divisions-v1";
-  const OLD_STORAGE_KEY = "nsw-callsign-log-entries-v1"; // pre-division single list
-
   const STORAGE_KEYS = ['shared', ...DIVISION_KEYS, 'terminated'];
 
-  /* ---------- Storage ----------
+  /* ---------- Storage (Supabase — shared across everyone) ----------
      "shared" holds officers ranked Commissioner through Chief Inspector —
      force-wide executive ranks that aren't tied to one division, so an
-     entry logged at one of those ranks shows up on every division tab. */
-  function loadAll(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){
-        const parsed = JSON.parse(raw);
-        const out = {};
-        STORAGE_KEYS.forEach(k => { out[k] = Array.isArray(parsed[k]) ? parsed[k] : []; });
-        return out;
-      }
-    }catch(e){ console.error('Could not read saved log', e); }
+     entry logged at one of those ranks shows up on every division tab.
 
-    // Migrate a pre-division flat log, if one exists, into General duties.
-    const out = {};
-    STORAGE_KEYS.forEach(k => out[k] = []);
-    try{
-      const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
-      if(oldRaw){
-        const oldParsed = JSON.parse(oldRaw);
-        if(Array.isArray(oldParsed)) out.general = oldParsed;
-      }
-    }catch(e){ /* nothing to migrate */ }
-    return out;
-  }
-  function saveAll(){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(entriesByDivision)); }
-    catch(e){ console.error('Could not save log', e); }
-  }
-  let entriesByDivision = loadAll();
+     entriesByDivision / promotionLog stay as the same in-memory shape
+     the rest of the app already expects. reloadAll() repopulates them
+     from Supabase; every mutation writes to Supabase first, then calls
+     reloadAll() so this tab (and every other open tab, via realtime)
+     ends up showing the same data. */
+  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], terminated: [] };
+  let promotionLog = [];
+  let loadError = false;
 
-  // Promotion logs — a separate, flat history of every rank/division
-  // change made through the Promote popover. Not part of entriesByDivision
-  // since it's a log of events, not a roster of officers.
-  const PROMO_LOG_KEY = "nsw-callsign-log-promotions-v1";
-  function loadPromotionLog(){
-    try{
-      const raw = localStorage.getItem(PROMO_LOG_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    }catch(e){ console.error('Could not read promotion log', e); return []; }
+  function rowToEntry(row){
+    return {
+      id: row.id, callsign: row.callsign, rank: row.rank, unit: row.unit,
+      discord: row.discord, promo: row.promo, time: row.time,
+      fto: row.fto || '', notes: row.notes || '',
+      checklist: row.checklist || {}, created: row.created
+    };
   }
-  function savePromotionLog(){
-    try{ localStorage.setItem(PROMO_LOG_KEY, JSON.stringify(promotionLog)); }
-    catch(e){ console.error('Could not save promotion log', e); }
+  function rowToPromo(row){
+    return {
+      id: row.id, name: row.name, callsign: row.callsign,
+      fromRank: row.from_rank, fromDivision: row.from_division,
+      toRank: row.to_rank, toDivision: row.to_division,
+      date: row.date, created: row.created
+    };
   }
-  let promotionLog = loadPromotionLog();
+
+  async function reloadOfficers(){
+    const { data, error } = await sb.from('officers').select('*');
+    if(error){ console.error('Could not load officers', error); loadError = true; return; }
+    loadError = false;
+    const out = { shared: [], general: [], highway: [], tou: [], crime: [], terminated: [] };
+    (data || []).forEach(row => {
+      const key = STORAGE_KEYS.includes(row.list_key) ? row.list_key : 'general';
+      out[key].push(rowToEntry(row));
+    });
+    entriesByDivision = out;
+  }
+  async function reloadPromotions(){
+    const { data, error } = await sb.from('promotion_log').select('*').order('created', { ascending: false });
+    if(error){ console.error('Could not load promotion log', error); return; }
+    promotionLog = (data || []).map(rowToPromo);
+  }
+  async function reloadAll(){
+    await Promise.all([reloadOfficers(), reloadPromotions()]);
+    renderAllDivisions();
+    renderTerminated();
+    renderAcademy();
+    renderStudentChecklist();
+    renderPromotionLogs();
+    document.getElementById('saved-indicator').textContent = loadError ? 'offline — check connection' : 'synced';
+  }
+
+  async function insertOfficerRow(entry, listKey){
+    const { error } = await sb.from('officers').insert({
+      id: entry.id, list_key: listKey, callsign: entry.callsign, rank: entry.rank,
+      unit: entry.unit, discord: entry.discord, promo: entry.promo, time: entry.time,
+      fto: entry.fto || '', notes: entry.notes || '', checklist: entry.checklist || {},
+      created: entry.created
+    });
+    if(error) console.error('Could not save officer', error);
+  }
+  async function updateOfficerRow(id, fields){
+    const payload = {};
+    if('listKey' in fields) payload.list_key = fields.listKey;
+    ['callsign','rank','unit','discord','promo','time','fto','notes','checklist'].forEach(k => {
+      if(k in fields) payload[k] = fields[k];
+    });
+    const { error } = await sb.from('officers').update(payload).eq('id', id);
+    if(error) console.error('Could not update officer', error);
+  }
+  async function insertPromotionLogRow(p){
+    const { error } = await sb.from('promotion_log').insert({
+      id: p.id, name: p.name, callsign: p.callsign, from_rank: p.fromRank,
+      from_division: p.fromDivision, to_rank: p.toRank, to_division: p.toDivision,
+      date: p.date, created: p.created
+    });
+    if(error) console.error('Could not save promotion log entry', error);
+  }
+  async function clearAllRows(){
+    await sb.from('officers').delete().neq('id', '__none__');
+    await sb.from('promotion_log').delete().neq('id', '__none__');
+  }
   function divisionLabelFor(listKey){
     if(listKey === 'shared') return 'Shared (Executive)';
     if(listKey === 'terminated') return 'Terminated';
@@ -1224,16 +1269,10 @@
     const found = findEntry(divKey, id);
     if(!found) return;
     const entry = entriesByDivision[found.listKey][found.idx];
-    showConfirm('Terminate ' + (entry.unit || entry.callsign) + '? They will be moved to the Terminated officers tab.', (reason) => {
-      entriesByDivision[found.listKey].splice(found.idx, 1);
-      entry.time = todayStr();
-      entry.notes = reason;
-      entriesByDivision.terminated.push(entry);
-      saveAll();
-      renderAllDivisions();
-      renderTerminated();
-      renderAcademy();
-      renderStudentChecklist();
+    showConfirm('Terminate ' + (entry.unit || entry.callsign) + '? They will be moved to the Terminated officers tab.', async (reason) => {
+      const time = todayStr();
+      await updateOfficerRow(entry.id, { listKey: 'terminated', time, notes: reason });
+      await reloadAll();
       activateSheet('sheet-seniorcommand');
       activateSeniorCommandSub('terminated');
       requestAnimationFrame(() => {
@@ -1277,15 +1316,12 @@
     ftoPopEl.classList.add('open');
   }
   function closeFtoPop(){ ftoPopEl.classList.remove('open'); }
-  function setFtoStatus(divKey, id, value){
+  async function setFtoStatus(divKey, id, value){
     const found = findEntry(divKey, id);
     if(!found){ closeFtoPop(); return; }
-    entriesByDivision[found.listKey][found.idx].fto = value;
-    saveAll();
-    renderAllDivisions();
-    renderAcademy();
-      renderStudentChecklist();
     closeFtoPop();
+    await updateOfficerRow(id, { fto: value });
+    await reloadAll();
   }
   document.addEventListener('click', (ev) => {
     if(ftoPopEl.classList.contains('open') && !ev.target.closest('.fto-pop') && !ev.target.closest('.row-fto')){
@@ -1401,11 +1437,13 @@
       const span = document.createElement('span');
       span.className = 'item-label';
       span.textContent = item;
-      cb.addEventListener('change', () => {
+      cb.addEventListener('change', async () => {
         entry.checklist[item] = cb.checked;
-        saveAll();
         label.classList.toggle('done', cb.checked);
         refreshChecklistProgressUI(entry);
+        renderStudentChecklist();
+        await updateOfficerRow(entry.id, { checklist: entry.checklist });
+        await reloadOfficers();
         renderStudentChecklist();
       });
       label.appendChild(cb);
@@ -1730,7 +1768,7 @@
   }
   function renderAllDivisions(){ DIVISION_KEYS.forEach(renderDivision); }
 
-  function addEntry(divKey){
+  async function addEntry(divKey){
     const callsignField = document.getElementById('f-callsign-' + divKey);
     const rankField = document.getElementById('f-rank-' + divKey);
     const unitField = document.getElementById('f-unit-' + divKey);
@@ -1750,18 +1788,16 @@
       fto: '',
       created: Date.now()
     };
-    entriesByDivision[listKeyFor(divKey, entry.rank)].push(entry);
-    saveAll();
+    const rankVal = rankField.value;
     unitField.value = '';
     discordField.value = '';
     promoField.value = '';
     timeField.value = '';
-    callsignField.value = nextCallsignForRank(divKey, rankField.value);
     callsignField.focus();
     callsignField.select();
-    renderAllDivisions();
-    renderAcademy();
-    renderStudentChecklist();
+    await insertOfficerRow(entry, listKeyFor(divKey, entry.rank));
+    await reloadAll();
+    callsignField.value = nextCallsignForRank(divKey, rankVal);
   }
 
   /* ---------- Wire up each division ---------- */
@@ -1961,7 +1997,7 @@
 
   document.getElementById('promote-cancel-btn').addEventListener('click', closePromotePop);
 
-  document.getElementById('promote-confirm-btn').addEventListener('click', () => {
+  document.getElementById('promote-confirm-btn').addEventListener('click', async () => {
     if(!promoteTarget) return;
     const { currentDivKey, id } = promoteTarget;
     const found = findEntry(currentDivKey, id);
@@ -1973,23 +2009,21 @@
     const oldListKey = found.listKey;
 
     const suggestion = nextCallsignForRank(newDivKey, newRank);
-    entry.rank = newRank;
-    if(suggestion) entry.callsign = suggestion;
+    const newCallsign = suggestion || entry.callsign;
     // Reinstating from Terminated officers: the "time" field held a
     // termination date, which is meaningless once they're active again.
-    if(found.listKey === 'terminated') entry.time = todayStr();
-
+    const newTime = found.listKey === 'terminated' ? todayStr() : entry.time;
     const newListKey = listKeyFor(newDivKey, newRank);
-    if(newListKey !== found.listKey){
-      entriesByDivision[found.listKey].splice(found.idx, 1);
-      entriesByDivision[newListKey].push(entry);
-    }
+
+    closePromotePop();
+    await updateOfficerRow(entry.id, { rank: newRank, callsign: newCallsign, listKey: newListKey, time: newTime });
+
     // Log the change, but only if something actually changed.
     if(oldRank !== newRank || oldListKey !== newListKey){
-      promotionLog.push({
+      await insertPromotionLogRow({
         id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
         name: entry.unit || entry.callsign,
-        callsign: entry.callsign,
+        callsign: newCallsign,
         fromRank: oldRank,
         fromDivision: divisionLabelFor(oldListKey),
         toRank: newRank,
@@ -1997,15 +2031,8 @@
         date: todayStr(),
         created: Date.now()
       });
-      savePromotionLog();
-      renderPromotionLogs();
     }
-    saveAll();
-    renderAllDivisions();
-    renderTerminated();
-    renderAcademy();
-      renderStudentChecklist();
-    closePromotePop();
+    await reloadAll();
 
     activateSheet('sheet-callsigns');
     activateCallsignDivision(newDivKey);
@@ -2117,30 +2144,31 @@
   function wireRosterImport(btnId, divKey, roster){
     const btn = document.getElementById(btnId);
     if(!btn) return;
-    btn.addEventListener('click', () => {
-      let count = 0;
-      roster.forEach(item => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Importing…';
+      const rows = [];
+      roster.forEach((item, i) => {
         const callsign = nextCallsignForRank(divKey, item.rank);
         if(!callsign) return;
-        const entry = {
-          id: 'e' + Date.now() + Math.random().toString(36).slice(2,7),
-          callsign,
-          rank: item.rank,
+        // Reserve this callsign locally so the next iteration doesn't
+        // suggest the same one before this batch is written.
+        entriesByDivision[listKeyFor(divKey, item.rank)].push({ callsign, rank: item.rank });
+        rows.push({
+          id: 'e' + Date.now() + Math.random().toString(36).slice(2,7) + i,
+          list_key: listKeyFor(divKey, item.rank),
+          callsign, rank: item.rank,
           unit: item.first + ' ' + item.last,
-          discord: item.discord || '',
-          promo: item.promo,
-          time: '',
-          created: Date.now()
-        };
-        entriesByDivision[listKeyFor(divKey, item.rank)].push(entry);
-        count++;
+          discord: item.discord || '', promo: item.promo, time: '',
+          fto: '', notes: '', checklist: {}, created: Date.now()
+        });
       });
-      saveAll();
-      renderAllDivisions();
-      renderAcademy();
-      renderStudentChecklist();
-      btn.textContent = 'Imported ' + count + ' officers';
-      btn.disabled = true;
+      if(rows.length){
+        const { error } = await sb.from('officers').insert(rows);
+        if(error) console.error('Roster import failed', error);
+      }
+      await reloadAll();
+      btn.textContent = 'Imported ' + rows.length + ' officers';
     });
   }
   wireRosterImport('import-roster-btn', 'general', GD_ROSTER_IMPORT);
@@ -2259,7 +2287,7 @@
     });
   }
 
-  function addTerminatedEntry(){
+  async function addTerminatedEntry(){
     const callsignField = document.getElementById('f-callsign-terminated');
     const unitField = document.getElementById('f-unit-terminated');
     const discordField = document.getElementById('f-discord-terminated');
@@ -2277,10 +2305,9 @@
       promo: promoField.value.trim(),
       time: timeField.value || todayStr(),
       notes: notesField.value.trim(),
+      fto: '',
       created: Date.now()
     };
-    entriesByDivision.terminated.push(entry);
-    saveAll();
     callsignField.value = '';
     unitField.value = '';
     discordField.value = '';
@@ -2288,7 +2315,8 @@
     timeField.value = '';
     notesField.value = '';
     callsignField.focus();
-    renderTerminated();
+    await insertOfficerRow(entry, 'terminated');
+    await reloadAll();
   }
   document.getElementById('add-btn-terminated').addEventListener('click', addTerminatedEntry);
   document.getElementById('entry-row-terminated').addEventListener('keydown', (ev) => {
@@ -2317,16 +2345,9 @@
   document.getElementById('clear-all-btn').addEventListener('click', () => {
     const totalRows = STORAGE_KEYS.reduce((sum, k) => sum + (entriesByDivision[k] || []).length, 0);
     if(totalRows === 0) return;
-    showConfirm('Delete all ' + totalRows + ' rows across every tab? This can\'t be undone.', () => {
-      STORAGE_KEYS.forEach(k => { entriesByDivision[k] = []; });
-      promotionLog = [];
-      savePromotionLog();
-      saveAll();
-      renderAllDivisions();
-      renderTerminated();
-      renderAcademy();
-      renderStudentChecklist();
-      renderPromotionLogs();
+    showConfirm('Delete all ' + totalRows + ' rows across every tab, for EVERYONE using this roster? This can\'t be undone.', async () => {
+      await clearAllRows();
+      await reloadAll();
       // Re-enable the import buttons so a fresh import can be run again.
       ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime'].forEach(id => {
         const btn = document.getElementById(id);
@@ -2340,12 +2361,6 @@
     });
   });
 
-  DIVISION_KEYS.forEach(renderDivision);
-  renderTerminated();
-  renderAcademy();
-      renderStudentChecklist();
-  renderPromotionLogs();
-
   /* ---------- Ranks reference sheet (single unified list) ---------- */
   function renderRankGrid(){
     const body = document.getElementById('rank-body');
@@ -2357,6 +2372,15 @@
     });
   }
   renderRankGrid();
+
+  /* ---------- Initial load + realtime sync ----------
+     Loads the current shared state from Supabase, then subscribes to
+     changes so every open tab stays in sync when anyone else edits. */
+  reloadAll();
+  sb.channel('officers-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'officers' }, () => { reloadAll(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_log' }, () => { reloadAll(); })
+    .subscribe();
 })();
 </script>
 </body>
