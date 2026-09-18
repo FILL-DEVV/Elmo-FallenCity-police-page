@@ -14,10 +14,7 @@ module.exports = async (req, res) => {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Not logged in' });
 
-  const {
-    id, currentRank, listKey, callsign, rank, time, logEntry,
-    oldCallsign, officerName, discordId, toDivisionLabel
-  } = req.body || {};
+  const { id, currentRank, listKey, callsign, rank, time, logEntry, toDivisionLabel } = req.body || {};
   if (!id || !listKey || !rank) return res.status(400).json({ error: 'Missing required fields' });
 
   // Senior Sergeant+ can promote anyone. Senior FTO+ can only promote
@@ -27,6 +24,14 @@ module.exports = async (req, res) => {
   if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
 
   try {
+    // Read the officer's CURRENT record before overwriting it — the
+    // announcement below needs the old callsign and Discord ID, taken
+    // from the database rather than trusted from the browser.
+    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord`, {
+      extraHeaders: { Prefer: 'return=representation' }
+    });
+    const beforeRow = (before && before[0]) || {};
+
     // promo (the roster's "Promotion officer" column) is stamped from the
     // verified session too, same as promoted_by on the log entry below —
     // never trusted from the client.
@@ -57,8 +62,9 @@ module.exports = async (req, res) => {
           ROLE_REQUEST_CHANNEL_NAME
         );
         if (channel) {
-          const mention = isDiscordId(discordId) ? `<@${discordId}>` : (officerName || 'Unknown officer');
-          const content = `${mention} - ${oldCallsign || '—'} ${officerName || ''} + ${toDivisionLabel || ''}, ${rank} ; Callsign ${callsign}`;
+          const officerName = beforeRow.unit || beforeRow.callsign || 'Unknown officer';
+          const mention = isDiscordId(beforeRow.discord) ? `<@${beforeRow.discord}>` : officerName;
+          const content = `${mention} - ${beforeRow.callsign || '—'} ${officerName} + ${toDivisionLabel || ''}, ${rank} ; Callsign ${callsign}`;
           await sendChannelMessage(channel.id, process.env.DISCORD_BOT_TOKEN, content);
         } else {
           console.error(`Promotion announce skipped: no channel named #${ROLE_REQUEST_CHANNEL_NAME} found`);
