@@ -1,5 +1,6 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
+const { syncRankRole } = require('../_lib/roleSync');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -17,6 +18,19 @@ module.exports = async (req, res) => {
       body: entry,
       extraHeaders: { Prefer: 'return=minimal' }
     });
+
+    // Assign their starting Discord role. Never blocks the add if it
+    // fails (missing role, no Discord ID, etc).
+    await syncRankRole({
+      guildId: process.env.DISCORD_GUILD_ID,
+      botToken: process.env.DISCORD_BOT_TOKEN,
+      discordUserId: entry.discord,
+      oldRank: null,
+      oldListKey: null,
+      newRank: entry.rank,
+      newListKey: entry.list_key
+    });
+
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error('add officer failed:', err);
