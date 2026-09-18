@@ -2125,6 +2125,7 @@
       callsign: newCallsign,
       rank: newRank,
       time: newTime,
+      toDivisionLabel: divisionLabelFor(newListKey),
       logEntry: changed ? {
         id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
         name: entry.unit || entry.callsign,
