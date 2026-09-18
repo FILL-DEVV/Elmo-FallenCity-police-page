@@ -27,8 +27,8 @@ async function fetchDiscordUser(accessToken) {
 
 // Bot-token calls below need no privileged intents: fetching a single
 // member by ID, listing a guild's roles/channels, posting a message to a
-// channel the bot can see, and adding/removing a role on a member the
-// bot outranks, are all plain REST calls.
+// channel the bot can see, and adding/removing/replacing roles on a
+// member the bot outranks, are all plain REST calls.
 async function fetchGuildMember(guildId, userId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` }
@@ -90,8 +90,26 @@ async function removeMemberRole(guildId, userId, roleId, botToken) {
   if (!res.ok) throw new Error('Failed to remove role: ' + res.status + ' ' + (await res.text()));
 }
 
+// Replaces a member's ENTIRE role list in one call (pass [] to strip
+// every role). Requires the bot's top role to sit above every role being
+// removed — any role above the bot's own position can't be touched, and
+// Discord will reject the whole request if one is included, not just
+// skip it.
+async function setMemberRoles(guildId, userId, roleIds, botToken) {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ roles: roleIds })
+  });
+  if (!res.ok) throw new Error('Failed to set member roles: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage,
-  addMemberRole, removeMemberRole
+  addMemberRole, removeMemberRole, setMemberRoles
 };
