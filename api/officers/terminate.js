@@ -1,6 +1,10 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
-const { syncRankRole } = require('../_lib/roleSync');
+const { setMemberRoles } = require('../_lib/discord');
+
+function isDiscordId(v) {
+  return typeof v === 'string' && /^\d{15,25}$/.test(v);
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -12,9 +16,8 @@ module.exports = async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Missing officer id' });
 
   try {
-    // Read their current rank/division/Discord ID before overwriting it,
-    // so the role removal below knows what to strip.
-    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=discord,rank,list_key`, {
+    // Read their Discord ID before overwriting the record.
+    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=discord`, {
       extraHeaders: { Prefer: 'return=representation' }
     });
     const beforeRow = (before && before[0]) || {};
@@ -25,17 +28,16 @@ module.exports = async (req, res) => {
       extraHeaders: { Prefer: 'return=minimal' }
     });
 
-    // Strip their rank role — no replacement, since "terminated" has no
-    // corresponding Discord role. Never blocks the termination if it fails.
-    await syncRankRole({
-      guildId: process.env.DISCORD_GUILD_ID,
-      botToken: process.env.DISCORD_BOT_TOKEN,
-      discordUserId: beforeRow.discord,
-      oldRank: beforeRow.rank,
-      oldListKey: beforeRow.list_key,
-      newRank: null,
-      newListKey: null
-    });
+    // Wipe every Discord role they hold. Never blocks the termination if
+    // it fails (no Discord ID on file, a role sits above the bot in the
+    // hierarchy, member already left the server, etc).
+    if (isDiscordId(beforeRow.discord)) {
+      try {
+        await setMemberRoles(process.env.DISCORD_GUILD_ID, beforeRow.discord, [], process.env.DISCORD_BOT_TOKEN);
+      } catch (roleErr) {
+        console.error('Could not wipe roles on termination:', roleErr);
+      }
+    }
 
     res.status(200).json({ ok: true });
   } catch (err) {
