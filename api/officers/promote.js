@@ -25,9 +25,11 @@ module.exports = async (req, res) => {
       extraHeaders: { Prefer: 'return=minimal' }
     });
     if (logEntry) {
+      // The promoting officer's name comes from the verified session,
+      // never from the client, so it can't be spoofed.
       await sbFetch('/promotion_log', {
         method: 'POST',
-        body: logEntry,
+        body: { ...logEntry, promoted_by: session.username },
         extraHeaders: { Prefer: 'return=minimal' }
       });
     }
