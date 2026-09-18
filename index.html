@@ -1188,6 +1188,16 @@
     if(termRow) termRow.style.display = p.canAddTerminatedRecord ? '' : 'none';
     const clearBtn = document.getElementById('clear-all-btn');
     if(clearBtn) clearBtn.style.display = p.canClearAll ? '' : 'none';
+
+    const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
+    if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
+    const seniorCommandTab = document.querySelector('.sheettab[data-sheet="sheet-seniorcommand"]');
+    if(seniorCommandTab) seniorCommandTab.style.display = p.canViewSeniorCommand ? '' : 'none';
+    // If the currently active tab just became hidden, fall back to Callsigns.
+    const activeTab = document.querySelector('.sheettab.active');
+    if(activeTab && activeTab.style.display === 'none'){
+      activateSheet('sheet-callsigns');
+    }
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
