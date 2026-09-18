@@ -35,9 +35,13 @@ module.exports = async (req, res) => {
     const roleNames = (member.roles || []).map(id => roleIdToName[id]).filter(Boolean);
     const perms = computePermissions(roleNames);
 
+    // Prefer the server nickname (what everyone actually sees in this
+    // Discord) over the account's global display name or username.
+    const displayName = member.nick || user.global_name || user.username;
+
     const cookie = makeSessionCookie({
       id: user.id,
-      username: user.global_name || user.username,
+      username: displayName,
       avatar: user.avatar,
       roleNames,
       perms
