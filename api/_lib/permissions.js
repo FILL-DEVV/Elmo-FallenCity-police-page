@@ -8,30 +8,44 @@ const TIER1_ROLES = [
 ];
 const TIER2_ROLES = ['fto'];
 const TIER3_ROLES = ['senior fto', 'lead fto', 'fto director', 'head of academy'];
+// High Command / Commissioners Office — unlocks the Senior Command tab.
+const HIGH_COMMAND_ROLES = ['high command', 'commissioners office'];
+// Department of Justice — full access to every tab and every action,
+// overriding all other tiers.
+const DOJ_ROLES = ['department of justice'];
 
 function computePermissions(roleNames) {
   const names = (roleNames || []).map(n => String(n).toLowerCase());
   const has = (list) => list.some(r => names.includes(r));
 
-  const tier1 = has(TIER1_ROLES); // Senior Sergeant and above
-  const tier2 = has(TIER2_ROLES); // FTO
-  const tier3 = has(TIER3_ROLES); // Senior FTO and above
+  const tier1 = has(TIER1_ROLES);       // Senior Sergeant and above
+  const tier2 = has(TIER2_ROLES);       // FTO
+  const tier3 = has(TIER3_ROLES);       // Senior FTO and above
+  const highCommand = has(HIGH_COMMAND_ROLES); // High Command / Commissioners Office
+  const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
 
   return {
-    tier1, tier2, tier3,
+    tier1, tier2, tier3, highCommand, isDOJ,
     // Full access: add, promote anyone, terminate.
-    canAdd: tier1 || tier2,
-    canTerminate: tier1,
-    canPromoteAny: tier1,
+    canAdd: tier1 || tier2 || isDOJ,
+    canTerminate: tier1 || isDOJ,
+    canPromoteAny: tier1 || isDOJ,
     // Tier 3 (Senior FTO+) can additionally promote officers whose
     // CURRENT rank is Student Police Officer — checked per-request
     // against the officer's actual current rank, not assumed here.
-    canPromoteStudent: tier1 || tier3,
-    canSetFto: tier1 || tier3,
-    canClearAll: tier1,
-    canImportRoster: tier1,
-    canAddTerminatedRecord: tier1
+    canPromoteStudent: tier1 || tier3 || isDOJ,
+    // FTO (tier2) can edit the promotion checklist, even though they
+    // can't perform the promotion itself.
+    canEditChecklist: tier1 || tier2 || tier3 || isDOJ,
+    canSetFto: tier1 || tier3 || isDOJ,
+    canClearAll: tier1 || isDOJ,
+    canImportRoster: tier1 || isDOJ,
+    canAddTerminatedRecord: tier1 || isDOJ,
+    // Tab visibility: Academy is FTO-affiliated (FTO or Senior FTO+);
+    // Senior Command is High Command / Commissioners Office. DOJ sees both.
+    canViewAcademy: tier2 || tier3 || isDOJ,
+    canViewSeniorCommand: highCommand || isDOJ
   };
 }
 
-module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES };
+module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES };
