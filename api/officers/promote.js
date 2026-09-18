@@ -1,12 +1,23 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
+const { findChannelByName, sendChannelMessage } = require('../_lib/discord');
+
+// Text channel the promotion announcement is posted to.
+const ROLE_REQUEST_CHANNEL_NAME = 'role-request';
+
+function isDiscordId(v) {
+  return typeof v === 'string' && /^\d{15,25}$/.test(v);
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Not logged in' });
 
-  const { id, currentRank, listKey, callsign, rank, time, logEntry } = req.body || {};
+  const {
+    id, currentRank, listKey, callsign, rank, time, logEntry,
+    oldCallsign, officerName, discordId, toDivisionLabel
+  } = req.body || {};
   if (!id || !listKey || !rank) return res.status(400).json({ error: 'Missing required fields' });
 
   // Senior Sergeant+ can promote anyone. Senior FTO+ can only promote
@@ -35,6 +46,26 @@ module.exports = async (req, res) => {
         body: { ...logEntry, promoted_by: session.username },
         extraHeaders: { Prefer: 'return=minimal' }
       });
+
+      // Announce the promotion in #role-request. A failure here (missing
+      // channel, missing bot permission, etc.) never fails the promotion
+      // itself — it's just logged.
+      try {
+        const channel = await findChannelByName(
+          process.env.DISCORD_GUILD_ID,
+          process.env.DISCORD_BOT_TOKEN,
+          ROLE_REQUEST_CHANNEL_NAME
+        );
+        if (channel) {
+          const mention = isDiscordId(discordId) ? `<@${discordId}>` : (officerName || 'Unknown officer');
+          const content = `${mention} - ${oldCallsign || '—'} ${officerName || ''} + ${toDivisionLabel || ''}, ${rank} ; Callsign ${callsign}`;
+          await sendChannelMessage(channel.id, process.env.DISCORD_BOT_TOKEN, content);
+        } else {
+          console.error(`Promotion announce skipped: no channel named #${ROLE_REQUEST_CHANNEL_NAME} found`);
+        }
+      } catch (announceErr) {
+        console.error('Promotion announce failed:', announceErr);
+      }
     }
     res.status(200).json({ ok: true });
   } catch (err) {
