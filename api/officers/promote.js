@@ -16,7 +16,10 @@ module.exports = async (req, res) => {
   if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
 
   try {
-    const payload = { rank, list_key: listKey };
+    // promo (the roster's "Promotion officer" column) is stamped from the
+    // verified session too, same as promoted_by on the log entry below —
+    // never trusted from the client.
+    const payload = { rank, list_key: listKey, promo: session.username };
     if (callsign) payload.callsign = callsign;
     if (time) payload.time = time;
     await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}`, {
