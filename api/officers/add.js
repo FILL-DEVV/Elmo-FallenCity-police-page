@@ -1,6 +1,15 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { syncRankRole } = require('../_lib/roleSync');
+const { sendChannelMessage } = require('../_lib/discord');
+
+// #role-request channel — same one promotions are announced to.
+// https://discord.com/channels/1401963000935485600/1524244391974404126
+const ROLE_REQUEST_CHANNEL_ID = '1524244391974404126';
+
+function isDiscordId(v) {
+  return typeof v === 'string' && /^\d{15,25}$/.test(v);
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -8,7 +17,9 @@ module.exports = async (req, res) => {
   if (!session) return res.status(401).json({ error: 'Not logged in' });
   if (!session.perms.canAdd) return res.status(403).json({ error: 'You do not have permission to add officers' });
 
-  const entry = req.body || {};
+  // divisionLabel is only used for the announcement below — it isn't an
+  // officers table column, so it's split out before the insert.
+  const { divisionLabel, ...entry } = req.body || {};
   if (!entry.id || !entry.list_key || !entry.callsign) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -30,6 +41,17 @@ module.exports = async (req, res) => {
       newRank: entry.rank,
       newListKey: entry.list_key
     });
+
+    // Announce the new officer in #role-request. Never blocks the add
+    // if it fails.
+    try {
+      const officerName = entry.unit || entry.callsign || 'Unknown officer';
+      const mention = isDiscordId(entry.discord) ? `<@${entry.discord}>` : officerName;
+      const content = `${mention} ${officerName} + ${divisionLabel || ''}, ${entry.rank} ; Callsign ${entry.callsign}`;
+      await sendChannelMessage(ROLE_REQUEST_CHANNEL_ID, process.env.DISCORD_BOT_TOKEN, content);
+    } catch (announceErr) {
+      console.error('New officer announce failed:', announceErr);
+    }
 
     res.status(200).json({ ok: true });
   } catch (err) {
