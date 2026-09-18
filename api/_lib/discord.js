@@ -26,8 +26,9 @@ async function fetchDiscordUser(accessToken) {
 }
 
 // Bot-token calls below need no privileged intents: fetching a single
-// member by ID, listing a guild's roles/channels, and posting a message
-// to a channel the bot can see, are all plain REST calls.
+// member by ID, listing a guild's roles/channels, posting a message to a
+// channel the bot can see, and adding/removing a role on a member the
+// bot outranks, are all plain REST calls.
 async function fetchGuildMember(guildId, userId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` }
@@ -73,7 +74,24 @@ async function sendChannelMessage(channelId, botToken, content) {
   return res.json();
 }
 
+async function addMemberRole(guildId, userId, roleId, botToken) {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to add role: ' + res.status + ' ' + (await res.text()));
+}
+
+async function removeMemberRole(guildId, userId, roleId, botToken) {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to remove role: ' + res.status + ' ' + (await res.text()));
+}
+
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
-  fetchGuildChannels, findChannelByName, sendChannelMessage
+  fetchGuildChannels, findChannelByName, sendChannelMessage,
+  addMemberRole, removeMemberRole
 };
