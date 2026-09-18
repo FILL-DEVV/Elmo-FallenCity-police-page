@@ -763,7 +763,10 @@
   <span class="dot"></span>
   <span class="fname">callsign-log.xlsx</span>
   <span class="fsub" id="saved-indicator">connecting…</span>
-  <button id="clear-all-btn" type="button" style="margin-left:14px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Clear all data</button>
+  <span id="auth-status" style="margin-left:14px; font-size:0.68rem; color:#8b96ac;">checking login…</span>
+  <a id="login-btn" href="#" style="display:none; margin-left:10px; background:#5865F2; color:#fff; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; font-weight:700; padding:5px 10px; border-radius:2px; text-decoration:none;">Log in with Discord</a>
+  <button id="logout-btn" type="button" style="display:none; margin-left:10px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Log out</button>
+  <button id="clear-all-btn" type="button" style="display:none; margin-left:14px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Clear all data</button>
 </div>
 <div class="formulabar" style="position:relative;">
   <div class="cellref" id="cellref">A1</div>
@@ -1109,6 +1112,88 @@
   let promotionLog = [];
   let loadError = false;
 
+  /* ---------- Discord login + permissions ----------
+     Writes no longer go straight to Supabase from the browser — they go
+     through /api/officers/* serverless functions, which check the
+     logged-in user's Discord roles (via a signed session cookie) before
+     touching the database with a privileged key. Reads still use the
+     publishable key directly, so the roster stays live/viewable for
+     everyone regardless of login state. */
+  const DISCORD_CLIENT_ID = "1550404631366991893";
+  let currentUser = { loggedIn: false, perms: {} };
+
+  function buildDiscordLoginUrl(){
+    const redirectUri = window.location.origin + '/api/auth/callback';
+    const params = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'identify'
+    });
+    return 'https://discord.com/api/oauth2/authorize?' + params.toString();
+  }
+
+  async function apiPost(path, body){
+    const res = await fetch(path, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    if(!res.ok){
+      let data = {};
+      try{ data = await res.json(); }catch(e){}
+      alert(data.error || ('Action failed (' + res.status + ')'));
+      throw new Error(data.error || ('HTTP ' + res.status));
+    }
+    return res.json();
+  }
+
+  async function loadAuth(){
+    try{
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      currentUser = await res.json();
+      if(!currentUser.perms) currentUser.perms = {};
+    }catch(e){
+      console.error('Could not load auth state', e);
+      currentUser = { loggedIn: false, perms: {} };
+    }
+    const statusEl = document.getElementById('auth-status');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    loginBtn.href = buildDiscordLoginUrl();
+    if(currentUser.loggedIn){
+      statusEl.textContent = currentUser.username + (currentUser.perms.tier1 ? ' · full access' : currentUser.perms.tier3 ? ' · FTO staff' : currentUser.perms.tier2 ? ' · FTO' : ' · view only');
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = '';
+    } else {
+      statusEl.textContent = 'not logged in';
+      loginBtn.style.display = '';
+      logoutBtn.style.display = 'none';
+    }
+    applyPermissionGating();
+  }
+
+  function applyPermissionGating(){
+    const p = currentUser.perms || {};
+    DIVISION_KEYS.forEach(key => {
+      const row = document.getElementById('entry-row-' + key);
+      if(row) row.style.display = p.canAdd ? '' : 'none';
+      ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime'].forEach(id => {
+        const b = document.getElementById(id);
+        if(b) b.style.display = p.canImportRoster ? '' : 'none';
+      });
+    });
+    const termRow = document.getElementById('entry-row-terminated');
+    if(termRow) termRow.style.display = p.canAddTerminatedRecord ? '' : 'none';
+    const clearBtn = document.getElementById('clear-all-btn');
+    if(clearBtn) clearBtn.style.display = p.canClearAll ? '' : 'none';
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    window.location.href = '/api/auth/logout';
+  });
+
   function rowToEntry(row){
     return {
       id: row.id, callsign: row.callsign, rank: row.rank, unit: row.unit,
@@ -1271,7 +1356,7 @@
     const entry = entriesByDivision[found.listKey][found.idx];
     showConfirm('Terminate ' + (entry.unit || entry.callsign) + '? They will be moved to the Terminated officers tab.', async (reason) => {
       const time = todayStr();
-      await updateOfficerRow(entry.id, { listKey: 'terminated', time, notes: reason });
+      await apiPost('/api/officers/terminate', { id: entry.id, time, notes: reason });
       await reloadAll();
       activateSheet('sheet-seniorcommand');
       activateSeniorCommandSub('terminated');
@@ -1320,7 +1405,7 @@
     const found = findEntry(divKey, id);
     if(!found){ closeFtoPop(); return; }
     closeFtoPop();
-    await updateOfficerRow(id, { fto: value });
+    await apiPost('/api/officers/fto', { id, value });
     await reloadAll();
   }
   document.addEventListener('click', (ev) => {
@@ -1358,6 +1443,7 @@
       body.appendChild(tr);
       return;
     }
+    const pAcademy = currentUser.perms || {};
     filtered.forEach(r => {
       const e = r.entry;
       const tr = document.createElement('tr');
@@ -1368,7 +1454,7 @@
         <td class="cell-unit">${escapeHtml(e.unit || '—')}</td>
         <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
         <td class="cell-promo">${escapeHtml(e.fto)}</td>
-        <td class="cell-actions"><button class="row-fto" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Change FTO status">FTO</button></td>
+        <td class="cell-actions">${pAcademy.canSetFto ? `<button class="row-fto" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Change FTO status">FTO</button>` : ''}</td>
       `;
       body.appendChild(tr);
     });
@@ -1442,7 +1528,7 @@
         label.classList.toggle('done', cb.checked);
         refreshChecklistProgressUI(entry);
         renderStudentChecklist();
-        await updateOfficerRow(entry.id, { checklist: entry.checklist });
+        await apiPost('/api/officers/checklist', { id: entry.id, checklist: entry.checklist });
         await reloadOfficers();
         renderStudentChecklist();
       });
@@ -1486,6 +1572,7 @@
       body.appendChild(tr);
       return;
     }
+    const pStudents = currentUser.perms || {};
     filtered.forEach(r => {
       const e = r.entry;
       const tr = document.createElement('tr');
@@ -1497,7 +1584,7 @@
         <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
         <td class="cell-promo">${escapeHtml(e.discord || '—')}</td>
         <td class="cell-checklist"><button class="row-checklist${checklistComplete(e) ? ' complete' : ''}" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promotion checklist">${checklistProgressLabel(e)}</button></td>
-        <td class="cell-actions"><button class="row-promote" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promote / transfer">↑</button></td>
+        <td class="cell-actions">${(pStudents.canPromoteAny || pStudents.canPromoteStudent) ? `<button class="row-promote" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promote / transfer">↑</button>` : ''}</td>
       `;
       body.appendChild(tr);
     });
@@ -1749,7 +1836,9 @@
       return;
     }
 
+    const p = currentUser.perms || {};
     filtered.forEach(e => {
+      const canPromoteThis = p.canPromoteAny || (e.rank === 'Student Police Officer' && p.canPromoteStudent);
       const tr = document.createElement('tr');
       tr.className = 'data-row';
       tr.setAttribute('data-row-id', e.id);
@@ -1761,7 +1850,7 @@
         <td class="cell-discord">${escapeHtml(e.discord || '—')}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
         <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
-        <td class="cell-actions"><button class="row-promote" data-id="${e.id}" type="button" title="Promote / transfer">↑</button><button class="row-fto" data-id="${e.id}" type="button" title="Set FTO status">FTO</button><button class="row-terminate" data-id="${e.id}" type="button" title="Terminate officer">⛔</button></td>
+        <td class="cell-actions">${canPromoteThis ? `<button class="row-promote" data-id="${e.id}" type="button" title="Promote / transfer">↑</button>` : ''}${p.canSetFto ? `<button class="row-fto" data-id="${e.id}" type="button" title="Set FTO status">FTO</button>` : ''}${p.canTerminate ? `<button class="row-terminate" data-id="${e.id}" type="button" title="Terminate officer">⛔</button>` : ''}</td>
       `;
       body.appendChild(tr);
     });
@@ -1795,7 +1884,7 @@
     timeField.value = '';
     callsignField.focus();
     callsignField.select();
-    await insertOfficerRow(entry, listKeyFor(divKey, entry.rank));
+    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank) });
     await reloadAll();
     callsignField.value = nextCallsignForRank(divKey, rankVal);
   }
@@ -2016,22 +2105,26 @@
     const newListKey = listKeyFor(newDivKey, newRank);
 
     closePromotePop();
-    await updateOfficerRow(entry.id, { rank: newRank, callsign: newCallsign, listKey: newListKey, time: newTime });
-
-    // Log the change, but only if something actually changed.
-    if(oldRank !== newRank || oldListKey !== newListKey){
-      await insertPromotionLogRow({
+    const changed = (oldRank !== newRank || oldListKey !== newListKey);
+    await apiPost('/api/officers/promote', {
+      id: entry.id,
+      currentRank: oldRank,
+      listKey: newListKey,
+      callsign: newCallsign,
+      rank: newRank,
+      time: newTime,
+      logEntry: changed ? {
         id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
         name: entry.unit || entry.callsign,
         callsign: newCallsign,
-        fromRank: oldRank,
-        fromDivision: divisionLabelFor(oldListKey),
-        toRank: newRank,
-        toDivision: divisionLabelFor(newListKey),
+        from_rank: oldRank,
+        from_division: divisionLabelFor(oldListKey),
+        to_rank: newRank,
+        to_division: divisionLabelFor(newListKey),
         date: todayStr(),
         created: Date.now()
-      });
-    }
+      } : null
+    });
     await reloadAll();
 
     activateSheet('sheet-callsigns');
@@ -2164,8 +2257,8 @@
         });
       });
       if(rows.length){
-        const { error } = await sb.from('officers').insert(rows);
-        if(error) console.error('Roster import failed', error);
+        try{ await apiPost('/api/officers/roster-import', { rows }); }
+        catch(e){ console.error('Roster import failed', e); }
       }
       await reloadAll();
       btn.textContent = 'Imported ' + rows.length + ' officers';
@@ -2315,7 +2408,7 @@
     timeField.value = '';
     notesField.value = '';
     callsignField.focus();
-    await insertOfficerRow(entry, 'terminated');
+    await apiPost('/api/officers/terminated-add', entry);
     await reloadAll();
   }
   document.getElementById('add-btn-terminated').addEventListener('click', addTerminatedEntry);
@@ -2346,7 +2439,7 @@
     const totalRows = STORAGE_KEYS.reduce((sum, k) => sum + (entriesByDivision[k] || []).length, 0);
     if(totalRows === 0) return;
     showConfirm('Delete all ' + totalRows + ' rows across every tab, for EVERYONE using this roster? This can\'t be undone.', async () => {
-      await clearAllRows();
+      await apiPost('/api/officers/clear-all', {});
       await reloadAll();
       // Re-enable the import buttons so a fresh import can be run again.
       ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime'].forEach(id => {
@@ -2376,7 +2469,7 @@
   /* ---------- Initial load + realtime sync ----------
      Loads the current shared state from Supabase, then subscribes to
      changes so every open tab stays in sync when anyone else edits. */
-  reloadAll();
+  loadAuth().then(reloadAll);
   sb.channel('officers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'officers' }, () => { reloadAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_log' }, () => { reloadAll(); })
