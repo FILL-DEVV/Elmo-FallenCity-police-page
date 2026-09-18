@@ -34,6 +34,11 @@ create table if not exists promotion_log (
   created bigint
 );
 
+-- Adds the "Promoting officer" column — safe to run even if it already
+-- exists. The server fills this in automatically from the logged-in
+-- Discord user, so it can't be spoofed from the browser.
+alter table promotion_log add column if not exists promoted_by text;
+
 -- ── Row Level Security ──────────────────────────────────────────────
 -- Phase 2: the browser (publishable key) may only READ. All writes now
 -- go through Vercel API routes using the service_role key, which
