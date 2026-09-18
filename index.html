@@ -1896,7 +1896,7 @@
     timeField.value = '';
     callsignField.focus();
     callsignField.select();
-    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank) });
+    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank), divisionLabel: divisionLabelFor(listKeyFor(divKey, entry.rank)) });
     await reloadAll();
     callsignField.value = nextCallsignForRank(divKey, rankVal);
   }
