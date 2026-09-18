@@ -1,6 +1,7 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { sendChannelMessage } = require('../_lib/discord');
+const { syncRankRole } = require('../_lib/roleSync');
 
 // #role-request channel — pinned by ID rather than looked up by name.
 // https://discord.com/channels/1401963000935485600/1524244391974404126
@@ -26,9 +27,10 @@ module.exports = async (req, res) => {
 
   try {
     // Read the officer's CURRENT record before overwriting it — the
-    // announcement below needs the old callsign and Discord ID, taken
-    // from the database rather than trusted from the browser.
-    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord`, {
+    // announcement and role sync below need the old callsign, rank,
+    // division and Discord ID, taken from the database rather than
+    // trusted from the browser.
+    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord,rank,list_key`, {
       extraHeaders: { Prefer: 'return=representation' }
     });
     const beforeRow = (before && before[0]) || {};
@@ -44,6 +46,19 @@ module.exports = async (req, res) => {
       body: payload,
       extraHeaders: { Prefer: 'return=minimal' }
     });
+
+    // Swap their Discord role to match the new rank/division. Never
+    // blocks the promotion if it fails (missing role, no Discord ID, etc).
+    await syncRankRole({
+      guildId: process.env.DISCORD_GUILD_ID,
+      botToken: process.env.DISCORD_BOT_TOKEN,
+      discordUserId: beforeRow.discord,
+      oldRank: beforeRow.rank,
+      oldListKey: beforeRow.list_key,
+      newRank: rank,
+      newListKey: listKey
+    });
+
     if (logEntry) {
       // The promoting officer's name comes from the verified session,
       // never from the client, so it can't be spoofed.
