@@ -921,7 +921,8 @@
             <th class="colhead col-callsign" style="width:150px;"><span class="letter">A</span><span class="fieldname">Officer</span></th>
             <th class="colhead col-unit"><span class="letter">B</span><span class="fieldname">From</span></th>
             <th class="colhead col-promo"><span class="letter">C</span><span class="fieldname">To</span></th>
-            <th class="colhead col-time"><span class="letter">D</span><span class="fieldname">Date</span></th>
+            <th class="colhead col-unit"><span class="letter">D</span><span class="fieldname">Promoting officer</span></th>
+            <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Date</span></th>
           </tr>
         </thead>
         <tbody id="log-body-promotions"></tbody>
@@ -1217,6 +1218,7 @@
       id: row.id, name: row.name, callsign: row.callsign,
       fromRank: row.from_rank, fromDivision: row.from_division,
       toRank: row.to_rank, toDivision: row.to_division,
+      promotedBy: row.promoted_by,
       date: row.date, created: row.created
     };
   }
@@ -2372,7 +2374,7 @@
     if(promotionLog.length === 0){
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      tr.innerHTML = `<td colspan="4">No promotions logged yet — they'll appear here automatically.</td>`;
+      tr.innerHTML = `<td colspan="5">No promotions logged yet — they'll appear here automatically.</td>`;
       body.appendChild(tr);
       return;
     }
@@ -2384,6 +2386,7 @@
         <td class="cell-unit">${escapeHtml(p.name)} <span style="color:var(--sub); font-size:0.7rem;">(${escapeHtml(p.callsign || '')})</span></td>
         <td class="cell-unit">${escapeHtml(p.fromRank)} — ${escapeHtml(p.fromDivision)}</td>
         <td class="cell-promo">${escapeHtml(p.toRank)} — ${escapeHtml(p.toDivision)}</td>
+        <td class="cell-unit">${escapeHtml(p.promotedBy || '—')}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(p.date))}</span></td>
       `;
       body.appendChild(tr);
