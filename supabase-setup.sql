@@ -35,22 +35,25 @@ create table if not exists promotion_log (
 );
 
 -- ── Row Level Security ──────────────────────────────────────────────
--- Phase 1 = open access: anyone with the publishable key can read/write.
--- (Phase 2 will replace these policies with Discord-role checks.)
+-- Phase 2: the browser (publishable key) may only READ. All writes now
+-- go through Vercel API routes using the service_role key, which
+-- checks the caller's Discord roles first and then bypasses RLS to
+-- perform the write. Run this even if you already ran Phase 1's
+-- version — it replaces the old open-write policy.
 alter table officers enable row level security;
 alter table promotion_log enable row level security;
 
 drop policy if exists "open access officers" on officers;
-create policy "open access officers"
-  on officers for all
-  using (true)
-  with check (true);
+drop policy if exists "public read officers" on officers;
+create policy "public read officers"
+  on officers for select
+  using (true);
 
 drop policy if exists "open access promotion_log" on promotion_log;
-create policy "open access promotion_log"
-  on promotion_log for all
-  using (true)
-  with check (true);
+drop policy if exists "public read promotion_log" on promotion_log;
+create policy "public read promotion_log"
+  on promotion_log for select
+  using (true);
 
 -- ── Realtime ─────────────────────────────────────────────────────────
 -- Lets every open browser tab see other people's changes live.
