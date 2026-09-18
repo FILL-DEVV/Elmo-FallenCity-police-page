@@ -1,9 +1,10 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
-const { findChannelByName, sendChannelMessage } = require('../_lib/discord');
+const { sendChannelMessage } = require('../_lib/discord');
 
-// Text channel the promotion announcement is posted to.
-const ROLE_REQUEST_CHANNEL_NAME = 'role-request';
+// #role-request channel — pinned by ID rather than looked up by name.
+// https://discord.com/channels/1401963000935485600/1524244391974404126
+const ROLE_REQUEST_CHANNEL_ID = '1524244391974404126';
 
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
@@ -53,22 +54,13 @@ module.exports = async (req, res) => {
       });
 
       // Announce the promotion in #role-request. A failure here (missing
-      // channel, missing bot permission, etc.) never fails the promotion
-      // itself — it's just logged.
+      // bot permission, etc.) never fails the promotion itself — it's
+      // just logged.
       try {
-        const channel = await findChannelByName(
-          process.env.DISCORD_GUILD_ID,
-          process.env.DISCORD_BOT_TOKEN,
-          ROLE_REQUEST_CHANNEL_NAME
-        );
-        if (channel) {
-          const officerName = beforeRow.unit || beforeRow.callsign || 'Unknown officer';
-          const mention = isDiscordId(beforeRow.discord) ? `<@${beforeRow.discord}>` : officerName;
-          const content = `${mention} - ${beforeRow.callsign || '—'} ${officerName} + ${toDivisionLabel || ''}, ${rank} ; Callsign ${callsign}`;
-          await sendChannelMessage(channel.id, process.env.DISCORD_BOT_TOKEN, content);
-        } else {
-          console.error(`Promotion announce skipped: no channel named #${ROLE_REQUEST_CHANNEL_NAME} found`);
-        }
+        const officerName = beforeRow.unit || beforeRow.callsign || 'Unknown officer';
+        const mention = isDiscordId(beforeRow.discord) ? `<@${beforeRow.discord}>` : officerName;
+        const content = `${mention} - ${beforeRow.callsign || '—'} ${officerName} + ${toDivisionLabel || ''}, ${rank} ; Callsign ${callsign}`;
+        await sendChannelMessage(ROLE_REQUEST_CHANNEL_ID, process.env.DISCORD_BOT_TOKEN, content);
       } catch (announceErr) {
         console.error('Promotion announce failed:', announceErr);
       }
