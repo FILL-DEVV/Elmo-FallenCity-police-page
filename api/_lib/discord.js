@@ -26,7 +26,8 @@ async function fetchDiscordUser(accessToken) {
 }
 
 // Bot-token calls below need no privileged intents: fetching a single
-// member by ID, and listing a guild's roles, are both plain REST calls.
+// member by ID, listing a guild's roles/channels, and posting a message
+// to a channel the bot can see, are all plain REST calls.
 async function fetchGuildMember(guildId, userId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` }
@@ -44,4 +45,35 @@ async function fetchGuildRoles(guildId, botToken) {
   return res.json();
 }
 
-module.exports = { exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles };
+async function fetchGuildChannels(guildId, botToken) {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch guild channels: ' + res.status);
+  return res.json();
+}
+
+// Finds a text channel by name (case-insensitive, leading "#" ignored).
+async function findChannelByName(guildId, botToken, name) {
+  const channels = await fetchGuildChannels(guildId, botToken);
+  const target = name.toLowerCase().replace(/^#/, '');
+  return channels.find(c => (c.name || '').toLowerCase() === target) || null;
+}
+
+async function sendChannelMessage(channelId, botToken, content) {
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ content })
+  });
+  if (!res.ok) throw new Error('Failed to send channel message: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
+module.exports = {
+  exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
+  fetchGuildChannels, findChannelByName, sendChannelMessage
+};
