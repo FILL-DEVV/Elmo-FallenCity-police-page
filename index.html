@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>callsign-log</title>
+<title>FallenCity PD Data</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -763,7 +763,7 @@
 
 <div class="titlebar">
   <span class="dot"></span>
-  <span class="fname">callsign-log.xlsx</span>
+  <span class="fname">FallenCity PD Data</span>
   <span class="fsub" id="saved-indicator">connecting…</span>
   <span id="auth-status" style="margin-left:14px; font-size:0.68rem; color:#8b96ac;">checking login…</span>
   <a id="login-btn" href="#" style="display:none; margin-left:10px; background:#5865F2; color:#fff; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; font-weight:700; padding:5px 10px; border-radius:2px; text-decoration:none;">Log in with Discord</a>
@@ -1125,7 +1125,12 @@
   let currentUser = { loggedIn: false, perms: {} };
 
   function buildDiscordLoginUrl(){
-    const redirectUri = window.location.origin + '/api/auth/callback';
+    // Pinned to the same canonical host the server's callback expects
+    // (see api/auth/callback.js) — using window.location.origin here
+    // would send a different redirect_uri depending on whether the
+    // visitor is on the bare apex domain or "www", which is what caused
+    // login to work in some browsers and not others.
+    const redirectUri = 'https://www.fallenpd.com/api/auth/callback';
     const params = new URLSearchParams({
       client_id: DISCORD_CLIENT_ID,
       redirect_uri: redirectUri,
