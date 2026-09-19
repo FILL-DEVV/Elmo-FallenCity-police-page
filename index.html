@@ -855,43 +855,6 @@
         <button class="btn" id="export-btn-terminated" type="button">Export .csv</button>
       </div>
 
-      <div class="quickadd" id="entry-row-terminated">
-        <div class="quickadd-title">+ New Terminated Record</div>
-        <div class="quickadd-fields">
-          <div class="qcell">
-            <label>Callsign</label>
-            <input id="f-callsign-terminated" placeholder="Last known callsign" autocomplete="off">
-          </div>
-          <div class="qcell">
-            <label>Rank</label>
-            <select id="f-rank-terminated"></select>
-          </div>
-          <div class="qcell">
-            <label>Officer name</label>
-            <input id="f-unit-terminated" placeholder="J. Smith" autocomplete="off">
-          </div>
-          <div class="qcell">
-            <label>Discord ID</label>
-            <input id="f-discord-terminated" placeholder="username" autocomplete="off">
-          </div>
-          <div class="qcell">
-            <label>Termination date</label>
-            <input id="f-time-terminated" type="date">
-          </div>
-          <div class="qcell">
-            <label>Terminating officer</label>
-            <input id="f-promo-terminated" placeholder="J. Doe" autocomplete="off">
-          </div>
-          <div class="qcell">
-            <label>Notes</label>
-            <input id="f-notes-terminated" placeholder="Reason for termination" autocomplete="off">
-          </div>
-        </div>
-        <div class="quickadd-add-row">
-          <button class="btn primary" id="add-btn-terminated" type="button">Add record</button>
-        </div>
-      </div>
-
       <div class="grid-scroll"><table class="grid">
         <thead>
           <tr>
@@ -1191,8 +1154,6 @@
         if(b) b.style.display = p.canImportRoster ? '' : 'none';
       });
     });
-    const termRow = document.getElementById('entry-row-terminated');
-    if(termRow) termRow.style.display = p.canAddTerminatedRecord ? '' : 'none';
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
@@ -2375,13 +2336,6 @@
   wireRosterImport('import-roster-btn-crime', 'crime', CIU_ROSTER_IMPORT);
 
   /* ---------- Terminated officers sheet (standalone, not a division) ---------- */
-  const termRankSelect = document.getElementById('f-rank-terminated');
-  GD_RANKS.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r; opt.textContent = r;
-    termRankSelect.appendChild(opt);
-  });
-
   let terminatedSortDir = 'desc';
   let terminatedRankFilter = '';
   const termRankFilterPop = document.getElementById('rank-filter-pop-terminated');
@@ -2439,7 +2393,7 @@
     if(filtered.length === 0){
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      tr.innerHTML = `<td colspan="7">${entries.length === 0 ? 'No rows yet — fill in the entry bar above and press Add.' : 'No rows match this search / filter.'}</td>`;
+      tr.innerHTML = `<td colspan="7">${entries.length === 0 ? 'No rows yet.' : 'No rows match this search / filter.'}</td>`;
       body.appendChild(tr);
       return;
     }
@@ -2486,41 +2440,6 @@
     });
   }
 
-  async function addTerminatedEntry(){
-    const callsignField = document.getElementById('f-callsign-terminated');
-    const unitField = document.getElementById('f-unit-terminated');
-    const discordField = document.getElementById('f-discord-terminated');
-    const promoField = document.getElementById('f-promo-terminated');
-    const timeField = document.getElementById('f-time-terminated');
-    const notesField = document.getElementById('f-notes-terminated');
-    const callsign = callsignField.value.trim();
-    if(!callsign) return;
-    const entry = {
-      id: 'e' + Date.now() + Math.random().toString(36).slice(2,7),
-      callsign: callsign.toUpperCase(),
-      rank: termRankSelect.value,
-      unit: unitField.value.trim(),
-      discord: discordField.value.trim(),
-      promo: promoField.value.trim(),
-      time: timeField.value || todayStr(),
-      notes: notesField.value.trim(),
-      fto: '',
-      created: Date.now()
-    };
-    callsignField.value = '';
-    unitField.value = '';
-    discordField.value = '';
-    promoField.value = '';
-    timeField.value = '';
-    notesField.value = '';
-    callsignField.focus();
-    await apiPost('/api/officers/terminated-add', entry);
-    await reloadAll();
-  }
-  document.getElementById('add-btn-terminated').addEventListener('click', addTerminatedEntry);
-  document.getElementById('entry-row-terminated').addEventListener('keydown', (ev) => {
-    if(ev.key === 'Enter'){ ev.preventDefault(); addTerminatedEntry(); }
-  });
   document.getElementById('time-sort-btn-terminated').addEventListener('click', (ev) => {
     ev.stopPropagation();
     terminatedSortDir = terminatedSortDir === 'desc' ? 'asc' : 'desc';
