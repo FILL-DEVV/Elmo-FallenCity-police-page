@@ -22,6 +22,40 @@ const DIVISION_ROLE_TAG = {
 // even after transferring to another division.
 const NEVER_REMOVE_ROLES = new Set(['general duties']);
 
+// Full rank ladder, most senior first — same order as the app's RANKS
+// list — used to work out "Incremental Sergeant and above".
+const RANK_LADDER = [
+  'Commissioner', 'Deputy Commissioner', 'Assistant Commissioner',
+  'Chief Superintendent', 'Superintendent', 'Chief Inspector',
+  'Inspector', 'Senior Sergeant', 'Incremental Sergeant', 'Sergeant',
+  'Leading Senior Constable', 'Incremental Senior Constable', 'Senior Constable',
+  'Constable', 'Probationary Constable', 'Student Police Officer'
+];
+const RANK_ORDER = Object.fromEntries(RANK_LADDER.map((r, i) => [r, i]));
+const INCREMENTAL_SERGEANT_INDEX = RANK_ORDER['Incremental Sergeant'];
+
+// Milestone role IDs added (never removed) once an officer reaches
+// Incremental Sergeant or above, by division. Chief Inspector and above
+// route to the shared "High Command Team" tier instead of a real
+// division, so they never hit this table — it only applies to the
+// division-specific ladder (Inspector, Senior Sergeant, Incremental
+// Sergeant themselves).
+const SENIOR_TIER_ROLE_IDS = {
+  general: ['1470033826892873955', '1525134536365703249', '1525134748761063677'],
+  tou: ['1467025802767110329', '1525134536365703249', '1525134748761063677'],
+  highway: ['1467025926234833123', '1470364089338429450', '1525134536365703249', '1525134748761063677'],
+  crime: ['1467025962217767075', '1470364244225687767', '1525134536365703249', '1525134748761063677']
+};
+
+// Milestone role IDs added (never removed) specifically at the Sergeant
+// rank (one tier below Incremental Sergeant), by division.
+const SERGEANT_TIER_ROLE_IDS = {
+  general: ['1525134748761063677'],
+  tou: ['1470364203503321212', '1525134748761063677'],
+  highway: ['1470364089338429450', '1525134748761063677'],
+  crime: ['1525134748761063677', '1470364203503321212']
+};
+
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
 }
@@ -115,4 +149,26 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
   });
 }
 
-module.exports = { rankRoleName, divisionRoleName, syncRankRole, syncFtoRole };
+// Grants the fixed milestone role set for reaching Sergeant, or
+// Incremental Sergeant and above, in a given division. These are ADDED
+// ONLY — never removed, even if the officer is later promoted further or
+// demoted — since they're meant as permanent qualification badges.
+async function grantMilestoneRoles({ guildId, botToken, discordUserId, rank, listKey }) {
+  if (!isDiscordId(discordUserId)) return;
+  if (!rank || !DIVISION_ROLE_TAG[listKey]) return; // not a real division (e.g. shared/HCT, terminated)
+
+  let idsToAdd;
+  if (rank === 'Sergeant') {
+    idsToAdd = SERGEANT_TIER_ROLE_IDS[listKey];
+  } else if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
+    idsToAdd = SENIOR_TIER_ROLE_IDS[listKey];
+  }
+  if (!idsToAdd || !idsToAdd.length) return;
+
+  for (const roleId of new Set(idsToAdd)) {
+    try { await addMemberRole(guildId, discordUserId, roleId, botToken); }
+    catch (e) { console.error('Milestone role add failed for role ' + roleId + ':', e); }
+  }
+}
+
+module.exports = { rankRoleName, divisionRoleName, syncRankRole, syncFtoRole, grantMilestoneRoles };
