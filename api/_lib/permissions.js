@@ -21,8 +21,8 @@ const EDIT_INFO_ROLES = [
   'chief superintendent', 'superintendent'
 ];
 // Incremental Sergeant — one tier below Senior Sergeant (TIER1). Gets
-// ONLY the Promote and Terminate buttons, not the rest of TIER1's access
-// (add officers, roster import, clear all, terminated records).
+// the Promote, Terminate, and Add Officer buttons, but not the rest of
+// TIER1's access (roster import, clear all, terminated records).
 const INCREMENTAL_SERGEANT_ROLES = ['incremental sergeant'];
 
 function computePermissions(roleNames) {
@@ -35,14 +35,13 @@ function computePermissions(roleNames) {
   const highCommand = has(HIGH_COMMAND_ROLES); // High Command Team / Commissioned Office
   const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
   const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
-  const incrementalSgt = has(INCREMENTAL_SERGEANT_ROLES); // Incremental Sergeant — promote/terminate only
+  const incrementalSgt = has(INCREMENTAL_SERGEANT_ROLES); // Incremental Sergeant
 
   return {
     tier1, tier2, tier3, highCommand, isDOJ,
-    // Full access: add, promote anyone, terminate.
-    canAdd: tier1 || tier2 || isDOJ,
-    // Terminate and Promote are also open to Incremental Sergeant, one
-    // tier below the rest of TIER1's access.
+    // Add, Promote, and Terminate are also open to Incremental Sergeant,
+    // one tier below the rest of TIER1's access.
+    canAdd: tier1 || tier2 || incrementalSgt || isDOJ,
     canTerminate: tier1 || incrementalSgt || isDOJ,
     canPromoteAny: tier1 || incrementalSgt || isDOJ,
     // Tier 3 (Senior FTO+) can additionally promote officers whose
