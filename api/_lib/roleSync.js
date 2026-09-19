@@ -34,12 +34,11 @@ const RANK_LADDER = [
 const RANK_ORDER = Object.fromEntries(RANK_LADDER.map((r, i) => [r, i]));
 const INCREMENTAL_SERGEANT_INDEX = RANK_ORDER['Incremental Sergeant'];
 
-// Milestone role IDs added (never removed) once an officer reaches
-// Incremental Sergeant or above, by division. Chief Inspector and above
-// route to the shared "High Command Team" tier instead of a real
-// division, so they never hit this table — it only applies to the
-// division-specific ladder (Inspector, Senior Sergeant, Incremental
-// Sergeant themselves).
+// Leadership-role IDs held while an officer is at Incremental Sergeant or
+// above, by division. Chief Inspector and above route to the shared
+// "High Command Team" tier instead of a real division, so they never hit
+// this table — it only applies to the division-specific ladder
+// (Inspector, Senior Sergeant, Incremental Sergeant themselves).
 const SENIOR_TIER_ROLE_IDS = {
   general: ['1470033826892873955', '1525134536365703249', '1525134748761063677'],
   tou: ['1467025802767110329', '1525134536365703249', '1525134748761063677'],
@@ -47,8 +46,8 @@ const SENIOR_TIER_ROLE_IDS = {
   crime: ['1467025962217767075', '1470364244225687767', '1525134536365703249', '1525134748761063677']
 };
 
-// Milestone role IDs added (never removed) specifically at the Sergeant
-// rank (one tier below Incremental Sergeant), by division.
+// Leadership-role IDs held specifically at the Sergeant rank (one tier
+// below Incremental Sergeant), by division.
 const SERGEANT_TIER_ROLE_IDS = {
   general: ['1525134748761063677'],
   tou: ['1470364203503321212', '1525134748761063677'],
@@ -76,6 +75,19 @@ function rankRoleName(rank) {
 function divisionRoleName(rank, listKey) {
   if (!rank) return null;
   return HCT_RANKS.has(rank) ? 'High Command Team' : (DIVISION_ROLE_TAG[listKey] || null);
+}
+
+// The leadership-role IDs an officer should hold for a given rank +
+// division — the Sergeant set, the Incremental-Sergeant-and-above set,
+// or none. Used to diff old vs new state so roles get stripped on
+// demotion, not just granted on promotion.
+function milestoneRoleIds(rank, listKey) {
+  if (!rank || !DIVISION_ROLE_TAG[listKey]) return [];
+  if (rank === 'Sergeant') return SERGEANT_TIER_ROLE_IDS[listKey] || [];
+  if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
+    return SENIOR_TIER_ROLE_IDS[listKey] || [];
+  }
+  return [];
 }
 
 // Removes a member's old named role (if any) and adds a new named role (if
@@ -149,26 +161,30 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
   });
 }
 
-// Grants the fixed milestone role set for reaching Sergeant, or
-// Incremental Sergeant and above, in a given division. These are ADDED
-// ONLY — never removed, even if the officer is later promoted further or
-// demoted — since they're meant as permanent qualification badges.
-async function grantMilestoneRoles({ guildId, botToken, discordUserId, rank, listKey }) {
+// Syncs the leadership roles (Sergeant tier / Incremental Sergeant+ tier)
+// by diffing what the officer's OLD rank+division earned against what
+// their NEW rank+division earns: roles only in the old set are stripped
+// (demotion, or moving to a division with a different role list), roles
+// only in the new set are added (promotion into a qualifying rank). A
+// role held under both stays untouched. Pass oldRank/oldListKey as null
+// for a brand-new officer (nothing to strip, just grants what's due).
+async function syncMilestoneRoles({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   if (!isDiscordId(discordUserId)) return;
-  if (!rank || !DIVISION_ROLE_TAG[listKey]) return; // not a real division (e.g. shared/HCT, terminated)
 
-  let idsToAdd;
-  if (rank === 'Sergeant') {
-    idsToAdd = SERGEANT_TIER_ROLE_IDS[listKey];
-  } else if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
-    idsToAdd = SENIOR_TIER_ROLE_IDS[listKey];
+  const oldIds = new Set(milestoneRoleIds(oldRank, oldListKey));
+  const newIds = new Set(milestoneRoleIds(newRank, newListKey));
+  if (oldIds.size === 0 && newIds.size === 0) return;
+
+  for (const roleId of oldIds) {
+    if (newIds.has(roleId)) continue;
+    try { await removeMemberRole(guildId, discordUserId, roleId, botToken); }
+    catch (e) { console.error('Leadership role remove failed for role ' + roleId + ':', e); }
   }
-  if (!idsToAdd || !idsToAdd.length) return;
-
-  for (const roleId of new Set(idsToAdd)) {
+  for (const roleId of newIds) {
+    if (oldIds.has(roleId)) continue;
     try { await addMemberRole(guildId, discordUserId, roleId, botToken); }
-    catch (e) { console.error('Milestone role add failed for role ' + roleId + ':', e); }
+    catch (e) { console.error('Leadership role add failed for role ' + roleId + ':', e); }
   }
 }
 
-module.exports = { rankRoleName, divisionRoleName, syncRankRole, syncFtoRole, grantMilestoneRoles };
+module.exports = { rankRoleName, divisionRoleName, syncRankRole, syncFtoRole, syncMilestoneRoles };
