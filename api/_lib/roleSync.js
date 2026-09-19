@@ -17,6 +17,11 @@ const DIVISION_ROLE_TAG = {
   crime: 'Criminal Investigations Unit'
 };
 
+// Roles that are never removed by role sync, no matter what the swap
+// would otherwise do — every PD member keeps General Duties permanently,
+// even after transferring to another division.
+const NEVER_REMOVE_ROLES = new Set(['general duties']);
+
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
 }
@@ -44,6 +49,8 @@ function divisionRoleName(rank, listKey) {
 // actual roles. Never throws — failures (no Discord ID on file, role
 // missing on the server, member left the guild, etc.) are logged and
 // swallowed, so a role-sync problem never blocks the roster update itself.
+// A role in NEVER_REMOVE_ROLES (e.g. General Duties) is never stripped,
+// even when it's the "old" role being swapped out.
 async function swapNamedRole({ guildId, botToken, discordUserId, oldName, newName }) {
   if (!isDiscordId(discordUserId)) return;
   if (oldName === newName) return; // nothing to change
@@ -57,7 +64,7 @@ async function swapNamedRole({ guildId, botToken, discordUserId, oldName, newNam
   }
   const byName = new Map(roles.map(r => [r.name.toLowerCase(), r.id]));
 
-  if (oldName) {
+  if (oldName && !NEVER_REMOVE_ROLES.has(oldName.toLowerCase())) {
     const oldId = byName.get(oldName.toLowerCase());
     if (oldId) {
       try { await removeMemberRole(guildId, discordUserId, oldId, botToken); }
@@ -81,7 +88,9 @@ async function swapNamedRole({ guildId, botToken, discordUserId, oldName, newNam
 // — e.g. moving General Duties - Senior Constable to Tactical Operations
 // Unit - Senior Constable removes/adds only the division role, since the
 // rank role ("Senior Constable") doesn't change; promoting rank within the
-// same division does the reverse.
+// same division does the reverse. General Duties is never removed here —
+// it's added like any other division role, but swapNamedRole refuses to
+// strip it.
 async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   await swapNamedRole({
     guildId, botToken, discordUserId,
