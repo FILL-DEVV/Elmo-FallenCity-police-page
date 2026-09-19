@@ -1,11 +1,17 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { syncRankRole } = require('../_lib/roleSync');
-const { sendChannelMessage } = require('../_lib/discord');
+const { sendChannelMessage, addMemberRole, removeMemberRole } = require('../_lib/discord');
 
 // #role-request channel — same one promotions are announced to.
 // https://discord.com/channels/1401963000935485600/1524244391974404126
 const ROLE_REQUEST_CHANNEL_ID = '1524244391974404126';
+
+// Every new officer gets these roles added (e.g. base "member" / "officer"
+// roles) and this one removed (e.g. an "applicant" or "pending" role),
+// on top of the rank+division role from syncRankRole above.
+const NEW_OFFICER_ADD_ROLE_IDS = ['1475023066265550919', '1401964701688270948', '1401964701008658473'];
+const NEW_OFFICER_REMOVE_ROLE_ID = '1470307178199122021';
 
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
@@ -41,6 +47,23 @@ module.exports = async (req, res) => {
       newRank: entry.rank,
       newListKey: entry.list_key
     });
+
+    // Fixed onboarding roles: add the standard set, remove the pending one.
+    // Never blocks the add if it fails (no Discord ID, missing permission, etc).
+    if (isDiscordId(entry.discord)) {
+      for (const roleId of NEW_OFFICER_ADD_ROLE_IDS) {
+        try {
+          await addMemberRole(process.env.DISCORD_GUILD_ID, entry.discord, roleId, process.env.DISCORD_BOT_TOKEN);
+        } catch (e) {
+          console.error('Could not add onboarding role ' + roleId + ':', e);
+        }
+      }
+      try {
+        await removeMemberRole(process.env.DISCORD_GUILD_ID, entry.discord, NEW_OFFICER_REMOVE_ROLE_ID, process.env.DISCORD_BOT_TOKEN);
+      } catch (e) {
+        console.error('Could not remove pending role ' + NEW_OFFICER_REMOVE_ROLE_ID + ':', e);
+      }
+    }
 
     // Announce the new officer in #role-request. Never blocks the add
     // if it fails.
