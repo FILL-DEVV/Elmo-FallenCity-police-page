@@ -377,6 +377,8 @@
   tr.data-row td.cell-promo .cell-promo-text{white-space:nowrap;}
   tr.data-row td.cell-actions{display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:nowrap;}
   tr.data-row td.cell-time .cell-time-text{white-space:nowrap;}
+  td.editable-cell{cursor:pointer;}
+  td.editable-cell:hover{outline:1px dashed var(--amber-deep); outline-offset:-2px;}
   .row-promote{
     border:1px solid var(--grid-strong);
     background:var(--cell);
@@ -1854,6 +1856,7 @@
     }
 
     const p = currentUser.perms || {};
+    const editInfo = p.canEditOfficerInfo;
     filtered.forEach(e => {
       const canPromoteThis = p.canPromoteAny || (e.rank === 'Student Police Officer' && p.canPromoteStudent);
       const tr = document.createElement('tr');
@@ -1862,9 +1865,9 @@
       tr.innerHTML = `
         <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
         <td class="cell-rank">${escapeHtml(e.rank || '—')}</td>
-        <td class="cell-unit">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-unit${editInfo ? ' editable-cell' : ''}" data-field="unit">${escapeHtml(e.unit || '—')}</td>
         <td class="cell-fto">${escapeHtml(e.fto || '—')}</td>
-        <td class="cell-discord">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-discord${editInfo ? ' editable-cell' : ''}" data-field="discord">${escapeHtml(e.discord || '—')}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
         <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
         <td class="cell-actions">${canPromoteThis ? `<button class="row-promote" data-id="${e.id}" type="button" title="Promote / transfer">↑</button>` : ''}${p.canSetFto ? `<button class="row-fto" data-id="${e.id}" type="button" title="Set FTO status">FTO</button>` : ''}${p.canTerminate ? `<button class="row-terminate" data-id="${e.id}" type="button" title="Terminate officer">⛔</button>` : ''}</td>
@@ -1873,6 +1876,49 @@
     });
   }
   function renderAllDivisions(){ DIVISION_KEYS.forEach(renderDivision); }
+
+  // Click-to-edit for Officer name / Discord ID — restricted to Superintendent
+  // and above via canEditOfficerInfo (the "editable-cell" class only gets
+  // added to cells that permission covers). Enter or blur saves; Escape
+  // reverts without saving.
+  function startInlineEdit(cellEl, divKey, id, field){
+    if(cellEl.querySelector('input')) return;
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    const currentValue = entry[field] || '';
+    cellEl.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentValue;
+    input.style.cssText = 'width:100%; box-sizing:border-box; font-family:inherit; font-size:inherit; border:1px solid var(--amber-deep); padding:2px 4px; background:var(--cell); color:var(--ink);';
+    cellEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    let settled = false;
+    const save = async () => {
+      if(settled) return;
+      settled = true;
+      const newValue = input.value.trim();
+      if(newValue !== currentValue){
+        await apiPost('/api/officers/edit-info', { id, field, value: newValue });
+        await reloadAll();
+      } else {
+        cellEl.textContent = currentValue || '—';
+      }
+    };
+    const cancel = () => {
+      if(settled) return;
+      settled = true;
+      cellEl.textContent = currentValue || '—';
+    };
+    input.addEventListener('keydown', (kev) => {
+      if(kev.key === 'Enter'){ kev.preventDefault(); save(); }
+      else if(kev.key === 'Escape'){ kev.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', () => { save(); });
+  }
 
   async function addEntry(divKey){
     const callsignField = document.getElementById('f-callsign-' + divKey);
@@ -1942,6 +1988,12 @@
     });
 
     document.getElementById('log-body-' + key).addEventListener('click', (ev) => {
+      const editableCell = ev.target.closest('td.editable-cell');
+      if(editableCell && !editableCell.querySelector('input')){
+        const tr = editableCell.closest('tr[data-row-id]');
+        if(tr) startInlineEdit(editableCell, key, tr.getAttribute('data-row-id'), editableCell.dataset.field);
+        return;
+      }
       const promoteBtn = ev.target.closest('button.row-promote');
       if(promoteBtn){
         openPromotePop(promoteBtn, key, promoteBtn.getAttribute('data-id'), 'Promote / transfer');
