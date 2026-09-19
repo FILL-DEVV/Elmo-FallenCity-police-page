@@ -2171,93 +2171,120 @@
   });
   window.addEventListener('scroll', () => { if(promotePopEl.classList.contains('open')) closePromotePop(); }, true);
 
-  // One-off roster import from the "Copy of Fallen City PD Roster" sheet
-  // (General Duties tab, gid=0). Callsigns are auto-assigned from the
-  // rank blocks rather than copied from the sheet, per what was asked.
-  // Rows with no name in the sheet, and "Police liaison" (no matching
-  // rank in this app), were left out.
+  // Roster import, refreshed from the live "Fallen City PD Roster" Google
+  // Sheet (General Duties / Highway Patrol / Tactical Operations Unit /
+  // Criminal Intelligence Unit tabs). Unlike the original import, callsigns
+  // and promotion dates come straight from the sheet instead of being
+  // auto-generated. Rows with no name filled in were left out as reserved
+  // slots, not real officers — including a couple of rows that shared a
+  // Discord ID with a named row elsewhere but had no name of their own.
+  // A few rank names were corrected for spelling ("Superintendant" →
+  // "Superintendent", "Seregant" → "Sergeant", etc). The sheet calls the
+  // last division "Criminal Intelligence Unit"; the app's existing
+  // "Criminal Investigations Unit" tab/label was kept as-is.
   const GD_ROSTER_IMPORT = [
-    { rank: "Police liaison", first: "Abdual", last: "Alaziz", promo: "Heath Sharr", discord: "348775132321284096" },
-    { rank: "Police liaison", first: "Monzy", last: "Wonzy", promo: "Heath Sharr", discord: "393886599508656130" },
-    { rank: "Commissioner", first: "Dave", last: "Carlson", promo: "Heath Sharr", discord: "841250934675472425" },
-    { rank: "Deputy Commissioner", first: "Carl", last: "Street", promo: "Nyx Sinclair", discord: "667945731537109002" },
-    { rank: "Chief Superintendent", first: "Moey", last: "Dontworry", promo: "Heath Sharr", discord: "289540687307997194" },
-    { rank: "Superintendent", first: "Elmo", last: "Bilal", promo: "Saint Yoza", discord: "530186142096818178" },
-    { rank: "Inspector", first: "Francis", last: "Carter", promo: "Saint Yoza", discord: "133879296161742849" },
-    { rank: "Senior Sergeant", first: "tay", last: "sano", promo: "elmo bilal", discord: "1299132475179798538" },
-    { rank: "Sergeant", first: "Freddy", last: "Mazza", promo: "Peter Dingleberry", discord: "1025713095345184788" },
-    { rank: "Senior Constable", first: "Peter", last: "Dingleberry", promo: "Elmo Bilal", discord: "" },
-    { rank: "Senior Constable", first: "Jerry", last: "Smith", promo: "Saint Yoza", discord: "1539230759192367175" },
-    { rank: "Senior Constable", first: "Dubby", last: "Vandogh", promo: "Scott Croft", discord: "1342012937019330570" },
-    { rank: "Senior Constable", first: "Jason", last: "Fatu", promo: "Dave Carlson", discord: "1483765020163834028" },
-    { rank: "Senior Constable", first: "Jah", last: "Mahal", promo: "Elmo Bilal", discord: "1353532333868716032" },
-    { rank: "Constable", first: "zadie", last: "officer", promo: "Dave Carlson", discord: "1262322183313555489" },
-    { rank: "Constable", first: "Adolf", last: "Peterson", promo: "Jalen Williams", discord: "1444906668923027466" },
-    { rank: "Constable", first: "luke", last: "peterson", promo: "Dave Carlson", discord: "529180634233569289" },
-    { rank: "Constable", first: "Tye", last: "Peterson", promo: "Jalen Williams", discord: "745119540324728914" },
-    { rank: "Constable", first: "meoy", last: "noongah", promo: "elmo bilal", discord: "326662149881462787" },
-    { rank: "Probationary Constable", first: "Won", last: "Ton", promo: "Jalen Williams", discord: "319022086590955522" },
-    { rank: "Probationary Constable", first: "BRBR", last: "DingleBurton", promo: "Jalen Williams", discord: "1478626448922251430" },
-    { rank: "Probationary Constable", first: "Quandale", last: "DingleBurton", promo: "Jalen Williams", discord: "745834344551153756" },
-    { rank: "Probationary Constable", first: "Carlos", last: "Withers", promo: "Jalen Williams", discord: "960063071542476861" },
-    { rank: "Probationary Constable", first: "clutchy", last: "wahaaa", promo: "Elmo Bilal", discord: "475952452022173698" },
-    { rank: "Probationary Constable", first: "Donny", last: "k", promo: "Dave Carlson", discord: "" },
-    { rank: "Probationary Constable", first: "Jerry", last: "G", promo: "Francis Carter / Elmo Bilal", discord: "1084467409496313906" },
-    { rank: "Probationary Constable", first: "tyrone", last: "roberts", promo: "robyn banks", discord: "" },
-    { rank: "Probationary Constable", first: "dolf", last: "ziggler", promo: "robyn banks", discord: "258935727184805888" },
-    { rank: "Probationary Constable", first: "Zoru", last: "Mackus", promo: "Abdul Alaziz", discord: "792356940197396490" }
+    { rank: "Police liaison", first: "Abdual", last: "Alaziz", callsign: "PL-100", promo: "Heath Sharr", date: "02/09/26", discord: "348775132321284096" },
+    { rank: "Police liaison", first: "Monzy", last: "Wonzy", callsign: "PL-200", promo: "Heath Sharr", date: "03/09/26", discord: "393886599508656130" },
+    { rank: "Commissioner", first: "Dave", last: "Carlson", callsign: "COM-100", promo: "Heath Sharr", date: "02/09/26", discord: "841250934675472425" },
+    { rank: "Deputy Commissioner", first: "Carl", last: "Street", callsign: "COM-200", promo: "Nyx Sinclair", date: "30/08/26", discord: "667945731537109002" },
+    { rank: "Chief Superintendent", first: "Moey", last: "Dontworry", callsign: "CMD-100", promo: "Heath Sharr", date: "01/09/2026", discord: "289540687307997194" },
+    { rank: "Superintendent", first: "Elmo", last: "Bilal", callsign: "CMD-200", promo: "Saint Yoza", date: "01/09/2026", discord: "530186142096818178" },
+    { rank: "Inspector", first: "Francis", last: "Carter", callsign: "GD-100", promo: "Saint Yoza", date: "30/08/2026", discord: "133879296161742849" },
+    { rank: "Senior Sergeant", first: "tay", last: "sano", callsign: "GD-200", promo: "elmo bilal", date: "13/09/2026", discord: "1299132475179798538" },
+    { rank: "Sergeant", first: "Freddy", last: "Mazza", callsign: "GD-300", promo: "Peter Dingleberry", date: "13/08/2026", discord: "1025713095345184788" },
+    { rank: "Senior Constable", first: "Peter", last: "Dingleberry", callsign: "GD-500", promo: "Elmo Bilal", date: "", discord: "" },
+    { rank: "Senior Constable", first: "Jerry", last: "Smith", callsign: "GD-501", promo: "Saint Yoza", date: "25/08/2026", discord: "1539230759192367175" },
+    { rank: "Senior Constable", first: "Dubby", last: "Vandogh", callsign: "GD-502", promo: "Scott Croft", date: "03/09/2026", discord: "1342012937019330570" },
+    { rank: "Senior Constable", first: "Jason", last: "Fatu", callsign: "GD-503", promo: "Dave Carlson", date: "11/09/2026", discord: "1483765020163834028" },
+    { rank: "Senior Constable", first: "Jah", last: "Mahal", callsign: "GD-509", promo: "Elmo Bilal", date: "01/09/2026", discord: "1353532333868716032" },
+    { rank: "Constable", first: "zadie", last: "officer", callsign: "GD-600", promo: "Dave Carlson", date: "16/09/2026", discord: "1262322183313555489" },
+    { rank: "Constable", first: "Adolf", last: "Peterson", callsign: "GD-602", promo: "Jalen Williams", date: "04/09/2026", discord: "1444906668923027466" },
+    { rank: "Constable", first: "luke", last: "peterson", callsign: "GD-604", promo: "Dave Carlson", date: "06/09/2026", discord: "529180634233569289" },
+    { rank: "Constable", first: "Tye", last: "Peterson", callsign: "GD-608", promo: "Jalen Williams", date: "03/09/2026", discord: "745119540324728914" },
+    { rank: "Constable", first: "meoy", last: "noongah", callsign: "GD-609", promo: "elmo bilal", date: "", discord: "326662149881462787" },
+    { rank: "Probationary Constable", first: "Won", last: "Ton", callsign: "GD-700", promo: "Jalen Williams", date: "03/09/2026", discord: "319022086590955522" },
+    { rank: "Probationary Constable", first: "BRBR", last: "DingleBurton", callsign: "GD-701", promo: "Jalen Williams", date: "03/09/2026", discord: "1478626448922251430" },
+    { rank: "Probationary Constable", first: "Quandale", last: "DingleBurton", callsign: "GD-702", promo: "Jalen Williams", date: "03/09/2026", discord: "745834344551153756" },
+    { rank: "Probationary Constable", first: "Carlos", last: "Withers", callsign: "GD-703", promo: "Jalen Williams", date: "04/09/2026", discord: "960063071542476861" },
+    { rank: "Probationary Constable", first: "clutchy", last: "wahaaa", callsign: "GD-704", promo: "Elmo Bilal", date: "10/08/2026", discord: "475952452022173698" },
+    { rank: "Probationary Constable", first: "Lebron", last: "wise", callsign: "GD-705", promo: "dave Carlson", date: "17/09/2026", discord: "777822444521652284" },
+    { rank: "Probationary Constable", first: "neal", last: "Wise", callsign: "GD-706", promo: "Dave Carlson", date: "17/09/2026", discord: "1067989932162941070" },
+    { rank: "Probationary Constable", first: "Donny", last: "k", callsign: "GD-707", promo: "Dave Carlson", date: "10/09/2026", discord: "" },
+    { rank: "Probationary Constable", first: "Jerry", last: "G", callsign: "GD-708", promo: "Francis Carter / Elmo Bilal", date: "01/09/2026", discord: "1084467409496313906" },
+    { rank: "Probationary Constable", first: "tyrone", last: "roberts", callsign: "GD-709", promo: "robyn banks", date: "11/09/2026", discord: "" },
+    { rank: "Probationary Constable", first: "dolf", last: "ziggler", callsign: "GD-710", promo: "robyn banks", date: "11/09/2026", discord: "258935727184805888" },
+    { rank: "Probationary Constable", first: "Mathew", last: "Smith", callsign: "GD-711", promo: "Dave Carlson", date: "18/08/2026", discord: "" },
+    { rank: "Probationary Constable", first: "Herman", last: "Miller", callsign: "GD-712", promo: "Dave Carlson", date: "18/09/2026", discord: "" },
+    { rank: "Probationary Constable", first: "Kevin", last: "g", callsign: "GD-713", promo: "Dave Carlson", date: "18/09/2026", discord: "816605723730771978" },
+    { rank: "Probationary Constable", first: "AKUMA", last: "", callsign: "GD-714", promo: "Dave Carlson", date: "18/09/2026", discord: "" },
+    { rank: "Probationary Constable", first: "Zoru", last: "Mackus", callsign: "GD-717", promo: "Abdul Alaziz", date: "12/09/2026", discord: "792356940197396490" }
   ];
 
   const HWY_ROSTER_IMPORT = [
-    { rank: "Inspector", first: "Sammy", last: "Vargh", promo: "Mylo White", discord: "572364893500473345" },
-    { rank: "Senior Sergeant", first: "Gwepp", last: "Sticks", promo: "Sammy/Jalen", discord: "1211986062973472809" },
-    { rank: "Sergeant", first: "Seb", last: "Hartel", promo: "Sammy Vargh", discord: "1434800569511448606" },
-    { rank: "Leading Senior Constable", first: "James", last: "Gold", promo: "Elmo bilal", discord: "876754008021270598" },
-    { rank: "Leading Senior Constable", first: "Brandon", last: "Tribes", promo: "", discord: "1457676362163687569" },
-    { rank: "Senior Constable", first: "Kanye", last: "East", promo: "Elmo Bilal", discord: "668323501832273942" },
-    { rank: "Senior Constable", first: "Jay", last: "Zee", promo: "Elmo Bilal", discord: "1120582535945125899" },
-    { rank: "Senior Constable", first: "Saint", last: "Yoza", promo: "Dave Carlson", discord: "1427184526777516104" },
-    { rank: "Senior Constable", first: "Tony", last: "Tizz", promo: "", discord: "671612229417697293" },
-    { rank: "Constable", first: "dicky", last: "spoon", promo: "Gwepp Sticks", discord: "902101384915222548" },
-    { rank: "Constable", first: "Jon", last: "Snow", promo: "Sammy Vargh", discord: "589000331791302687" },
-    { rank: "Constable", first: "chris", last: "ghezus", promo: "Gwepp Sticks", discord: "1314827386906349688" },
-    { rank: "Constable", first: "Ayy", last: "Kayy", promo: "Sammy/jalen", discord: "1126765858463678504" },
-    { rank: "Constable", first: "Spencer", last: "Bigbzy", promo: "Dave Carlson", discord: "659054996964245514" },
-    { rank: "Constable", first: "Travis", last: "sin", promo: "elmo bilal", discord: "862527956051034122" },
-    { rank: "Constable", first: "sophie", last: "george", promo: "Gwepp Sticks", discord: "791785294423916594" },
-    { rank: "Constable", first: "Jamal", last: "Walker", promo: "elmo bilal", discord: "1031128795555573851" },
-    { rank: "Constable", first: "tom", last: "pearl", promo: "Gwepp Sticks", discord: "1530123408262561836" }
+    { rank: "Inspector", first: "Sammy", last: "Vargh", callsign: "TRF-100", promo: "Mylo White", date: "22/08/2026", discord: "572364893500473345" },
+    { rank: "Senior Sergeant", first: "Gwepp", last: "Sticks", callsign: "TRF-200", promo: "Sammy/Jalen", date: "2/9/26", discord: "1211986062973472809" },
+    { rank: "Sergeant", first: "Seb", last: "Hartel", callsign: "TRF-300", promo: "Sammy Vargh", date: "27/08/2026", discord: "1434800569511448606" },
+    { rank: "Leading Senior Constable", first: "James", last: "Gold", callsign: "TRF-600", promo: "Elmo bilal", date: "", discord: "876754008021270598" },
+    { rank: "Leading Senior Constable", first: "Brandon", last: "Tribes", callsign: "TRF-401", promo: "", date: "", discord: "1457676362163687569" },
+    { rank: "Leading Senior Constable", first: "Vincent", last: "Vandogh", callsign: "TRF-400", promo: "Dave Carlson", date: "", discord: "" },
+    { rank: "Senior Constable", first: "Kanye", last: "East", callsign: "TRF-502", promo: "Elmo Bilal", date: "01/09/2026", discord: "668323501832273942" },
+    { rank: "Senior Constable", first: "Jay", last: "Zee", callsign: "TRF-503", promo: "Elmo Bilal", date: "31/08/2026", discord: "1120582535945125899" },
+    { rank: "Senior Constable", first: "Saint", last: "Yoza", callsign: "TRF-504", promo: "Dave Carlson", date: "03/09/2026", discord: "1427184526777516104" },
+    { rank: "Senior Constable", first: "Tony", last: "Tizz", callsign: "TRF-505", promo: "", date: "04/08/26", discord: "671612229417697293" },
+    { rank: "Constable", first: "dicky", last: "spoon", callsign: "TRF-700", promo: "Gwepp Sticks", date: "13/09/2026", discord: "902101384915222548" },
+    { rank: "Constable", first: "Jon", last: "Snow", callsign: "TRF-701", promo: "Sammy Vargh", date: "26/08/2026", discord: "589000331791302687" },
+    { rank: "Constable", first: "chris", last: "ghezus", callsign: "TRF-702", promo: "Gwepp Sticks", date: "13/9/26", discord: "1314827386906349688" },
+    { rank: "Constable", first: "Ayy", last: "Kayy", callsign: "TRF-703", promo: "Sammy/jalen", date: "06/09/2026", discord: "1126765858463678504" },
+    { rank: "Constable", first: "Spencer", last: "Bigbzy", callsign: "TRF-704", promo: "Dave Carlson", date: "07/09/2026", discord: "659054996964245514" },
+    { rank: "Constable", first: "Travis", last: "sin", callsign: "TRF-705", promo: "elmo bilal", date: "", discord: "862527956051034122" },
+    { rank: "Constable", first: "sophie", last: "george", callsign: "TRF-706", promo: "Gwepp Sticks", date: "13/09/2026", discord: "791785294423916594" },
+    { rank: "Constable", first: "Jamal", last: "Walker", callsign: "TRF-707", promo: "elmo bilal", date: "31/08/2026", discord: "1031128795555573851" },
+    { rank: "Constable", first: "tom", last: "pearl", callsign: "TRF-708", promo: "Gwepp Sticks", date: "13/09/2026", discord: "1530123408262561836" }
   ];
 
   const TOU_ROSTER_IMPORT = [
-    { rank: "Inspector", first: "Scott", last: "Croft", promo: "Dave Carlson", discord: "965865708766507029" },
-    { rank: "Senior Sergeant", first: "Timmy", last: "tittles", promo: "Dave Carlson", discord: "766636354964553778" },
-    { rank: "Leading Senior Constable", first: "Jason", last: "Livin", promo: "Dave Carlson", discord: "544012259605741633" },
-    { rank: "Leading Senior Constable", first: "Jake", last: "Brown", promo: "Dave Carlson", discord: "928096272852869240" },
-    { rank: "Leading Senior Constable", first: "Ronald", last: "Wise", promo: "Dave Carlson", discord: "1198355916379136104" },
-    { rank: "Leading Senior Constable", first: "Jack", last: "Rotty", promo: "Scott Croft", discord: "802569894360776714" },
-    { rank: "Leading Senior Constable", first: "Shush", last: "Papa", promo: "Dave Carlson", discord: "810830018614657054" },
-    { rank: "Senior Constable", first: "Jacob", last: "White", promo: "Dave Carlson", discord: "661139928461082644" },
-    { rank: "Senior Constable", first: "Bizza", last: "May", promo: "Abdul Alaziz", discord: "95456121770213376" },
-    { rank: "Senior Constable", first: "MK", last: "Light", promo: "Zee Versano", discord: "626934401313275928" },
-    { rank: "Senior Constable", first: "Pac", last: "Man", promo: "Scott Croft", discord: "" },
-    { rank: "Senior Constable", first: "Franklin", last: "Snow", promo: "Dave Carlson", discord: "729181400107974747" },
-    { rank: "Senior Constable", first: "Ben", last: "Stevo", promo: "Dave Carlson", discord: "528531917981876225" },
-    { rank: "Senior Constable", first: "Nigel", last: "VanDogh", promo: "Heath Sharr", discord: "898933721850347550" },
-    { rank: "Senior Constable", first: "Jax", last: "VanDogh", promo: "Dave Carlson", discord: "1342012937019330570" },
-    { rank: "Senior Constable", first: "Tyrone", last: "James", promo: "Keeds Taumatawhakatangi", discord: "919059450243973120" },
-    { rank: "Senior Constable", first: "Tendo", last: "Nobel", promo: "Scott Croft", discord: "1033213832224583712" },
-    { rank: "Senior Constable", first: "John", last: "Daily", promo: "Scott Croft", discord: "1368457103794245797" }
+    { rank: "Inspector", first: "Scott", last: "Croft", callsign: "TOU-100", promo: "Dave Carlson", date: "02/09/26", discord: "965865708766507029" },
+    { rank: "Senior Sergeant", first: "Timmy", last: "tittles", callsign: "TOU-200", promo: "Dave Carlson", date: "02/09/2026", discord: "766636354964553778" },
+    { rank: "Leading Senior Constable", first: "Jason", last: "Livin", callsign: "TOU-500", promo: "Dave Carlson", date: "25/08/2026", discord: "544012259605741633" },
+    { rank: "Leading Senior Constable", first: "Jake", last: "Brown", callsign: "TOU-501", promo: "Dave Carlson", date: "25/08/2026", discord: "928096272852869240" },
+    { rank: "Leading Senior Constable", first: "Ronald", last: "Wise", callsign: "TOU-502", promo: "Dave Carlson", date: "25/08/2026", discord: "1198355916379136104" },
+    { rank: "Leading Senior Constable", first: "Jack", last: "Rotty", callsign: "TOU-503", promo: "Scott Croft", date: "07/09/2026", discord: "802569894360776714" },
+    { rank: "Leading Senior Constable", first: "Shush", last: "Papa", callsign: "TOU-504", promo: "Dave Carlson", date: "", discord: "810830018614657054" },
+    { rank: "Senior Constable", first: "Jacob", last: "White", callsign: "TOU-600", promo: "Dave Carlson", date: "25/08/2026", discord: "661139928461082644" },
+    { rank: "Senior Constable", first: "Bizza", last: "May", callsign: "TOU-601", promo: "Abdul Alaziz", date: "14/08/2026", discord: "95456121770213376" },
+    { rank: "Senior Constable", first: "MK", last: "Light", callsign: "TOU-602", promo: "Zee Versano", date: "07/08/2026", discord: "626934401313275928" },
+    { rank: "Senior Constable", first: "Pac", last: "Man", callsign: "TOU-604", promo: "Scott Croft", date: "07/09/2026", discord: "" },
+    { rank: "Senior Constable", first: "Franklin", last: "Snow", callsign: "TOU-605", promo: "Dave Carlson", date: "01/09/2026", discord: "729181400107974747" },
+    { rank: "Senior Constable", first: "Tyrone", last: "James", callsign: "TOU-606", promo: "Scott Croft", date: "17/09/2026", discord: "919059450243973120" },
+    { rank: "Senior Constable", first: "Ben", last: "Stevo", callsign: "TOU-700", promo: "Dave Carlson", date: "16/09/2026", discord: "528531917981876225" },
+    { rank: "Senior Constable", first: "Nigel", last: "VanDogh", callsign: "TOU-701", promo: "Heath Sharr", date: "26/08/2026", discord: "898933721850347550" },
+    { rank: "Senior Constable", first: "Dominic", last: "Luca", callsign: "TOU-702", promo: "Dave Carlson", date: "17/09/2026", discord: "" },
+    { rank: "Senior Constable", first: "Mason", last: "Finkelstein", callsign: "TOU-703", promo: "Dave Carlson", date: "17/09/2026", discord: "557252376537464842" },
+    { rank: "Senior Constable", first: "Daniel", last: "Murphy", callsign: "TOU-704", promo: "Scott Croft", date: "17/09/2026", discord: "835577074957418566" },
+    { rank: "Senior Constable", first: "Jax", last: "vandogh", callsign: "TOU-705", promo: "Dave Carlson", date: "01/09/2026", discord: "1342012937019330570" },
+    { rank: "Senior Constable", first: "Tendo", last: "Nobel", callsign: "TOU-708", promo: "Scott Croft", date: "03/09/2026", discord: "1033213832224583712" },
+    { rank: "Senior Constable", first: "John", last: "Daily", callsign: "TOU-709", promo: "Scott Croft", date: "03/09/2026", discord: "1368457103794245797" }
   ];
 
   const CIU_ROSTER_IMPORT = [
-    { rank: "Inspector", first: "Jonathon", last: "David", promo: "Saint Yoza", discord: "1181078673424650332" },
-    { rank: "Senior Sergeant", first: "Abdul", last: "Ay-Rifiki", promo: "ciu 100 robyn", discord: "1319159218628071464" },
-    { rank: "Sergeant", first: "Rick", last: "Crayon", promo: "Jonathan", discord: "1402897591745777735" },
-    { rank: "Leading Senior Constable", first: "Steve", last: "Johnston", promo: "ciu 100 robyn", discord: "1497409537731461304" },
-    { rank: "Senior Constable", first: "Jaquaviusa", last: "dinston", promo: "Jonathan", discord: "" },
-    { rank: "Senior Constable", first: "Jakell", last: "Dumass", promo: "Saint Yoza", discord: "1072743291919024219" }
+    { rank: "Inspector", first: "Jonathon", last: "David", callsign: "CIU-100", promo: "Saint Yoza", date: "05/08/2026", discord: "1181078673424650332" },
+    { rank: "Senior Sergeant", first: "Abdul", last: "Ay-Rifiki", callsign: "CIU-200", promo: "ciu 100 robyn", date: "19/08/2026", discord: "1319159218628071464" },
+    { rank: "Sergeant", first: "Rick", last: "Crayon", callsign: "CIU-300", promo: "Jonathan", date: "07/09/26", discord: "1402897591745777735" },
+    { rank: "Leading Senior Constable", first: "Steve", last: "Johnston", callsign: "CIU-400", promo: "ciu 100 robyn", date: "07/09/26", discord: "1497409537731461304" },
+    { rank: "Senior Constable", first: "Jaquaviusa", last: "dinston", callsign: "CIU-700", promo: "Jonathan", date: "28/08/26", discord: "" },
+    { rank: "Senior Constable", first: "Jakell", last: "Dumass", callsign: "CIU-701", promo: "Saint Yoza", date: "31/08/26", discord: "1072743291919024219" }
   ];
+
+  // Converts the sheet's DD/MM/YY or DD/MM/YYYY dates to the app's
+  // YYYY-MM-DD format. Returns '' for missing/unrecognized dates.
+  function parseAuDate(str){
+    if(!str) return '';
+    const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+    if(!m) return '';
+    let [, d, mo, y] = m;
+    if(y.length === 2) y = '20' + y;
+    return y + '-' + mo.padStart(2,'0') + '-' + d.padStart(2,'0');
+  }
 
   function wireRosterImport(btnId, divKey, roster){
     const btn = document.getElementById(btnId);
@@ -2267,17 +2294,20 @@
       btn.textContent = 'Importing…';
       const rows = [];
       roster.forEach((item, i) => {
-        const callsign = nextCallsignForRank(divKey, item.rank);
+        // Use the sheet's own callsign when given; fall back to
+        // auto-generating one only if it's missing.
+        const callsign = (item.callsign && item.callsign.trim()) || nextCallsignForRank(divKey, item.rank);
         if(!callsign) return;
+        const listKey = listKeyFor(divKey, item.rank);
         // Reserve this callsign locally so the next iteration doesn't
         // suggest the same one before this batch is written.
-        entriesByDivision[listKeyFor(divKey, item.rank)].push({ callsign, rank: item.rank });
+        entriesByDivision[listKey].push({ callsign, rank: item.rank });
         rows.push({
           id: 'e' + Date.now() + Math.random().toString(36).slice(2,7) + i,
-          list_key: listKeyFor(divKey, item.rank),
+          list_key: listKey,
           callsign, rank: item.rank,
-          unit: item.first + ' ' + item.last,
-          discord: item.discord || '', promo: item.promo, time: '',
+          unit: item.first + (item.last ? ' ' + item.last : ''),
+          discord: item.discord || '', promo: item.promo || '', time: parseAuDate(item.date),
           fto: '', notes: '', checklist: {}, created: Date.now()
         });
       });
