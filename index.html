@@ -766,7 +766,6 @@
   <span id="auth-status" style="margin-left:14px; font-size:0.68rem; color:#8b96ac;">checking login…</span>
   <a id="login-btn" href="#" style="display:none; margin-left:10px; background:#5865F2; color:#fff; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; font-weight:700; padding:5px 10px; border-radius:2px; text-decoration:none;">Log in with Discord</a>
   <button id="logout-btn" type="button" style="display:none; margin-left:10px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Log out</button>
-  <button id="clear-all-btn" type="button" style="display:none; margin-left:14px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:4px 9px; cursor:pointer; border-radius:2px;">Clear all data</button>
 </div>
 <div class="formulabar" style="position:relative;">
   <div class="cellref" id="cellref">A1</div>
@@ -1187,8 +1186,6 @@
     });
     const termRow = document.getElementById('entry-row-terminated');
     if(termRow) termRow.style.display = p.canAddTerminatedRecord ? '' : 'none';
-    const clearBtn = document.getElementById('clear-all-btn');
-    if(clearBtn) clearBtn.style.display = p.canClearAll ? '' : 'none';
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
@@ -1274,10 +1271,6 @@
       date: p.date, created: p.created
     });
     if(error) console.error('Could not save promotion log entry', error);
-  }
-  async function clearAllRows(){
-    await sb.from('officers').delete().neq('id', '__none__');
-    await sb.from('promotion_log').delete().neq('id', '__none__');
   }
   function divisionLabelFor(listKey){
     if(listKey === 'shared') return 'Shared (Executive)';
@@ -1396,7 +1389,7 @@
   }
 
   /* ---------- FTO status popover ---------- */
-  const FTO_RANKS = ["Head Of Academy", "FTO Director", "Lead FTO", "Senior FTO", "FTO"];
+  const FTO_RANKS = ["Head Of Academy", "FTO Director", "FTO supervisor", "Senior FTO", "FTO"];
   const ftoPopEl = document.getElementById('fto-pop');
   const ftoPopListEl = document.getElementById('fto-pop-list');
 
@@ -2489,25 +2482,6 @@
     a.href = url; a.download = 'callsign-log-terminated.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  });
-
-  document.getElementById('clear-all-btn').addEventListener('click', () => {
-    const totalRows = STORAGE_KEYS.reduce((sum, k) => sum + (entriesByDivision[k] || []).length, 0);
-    if(totalRows === 0) return;
-    showConfirm('Delete all ' + totalRows + ' rows across every tab, for EVERYONE using this roster? This can\'t be undone.', async () => {
-      await apiPost('/api/officers/clear-all', {});
-      await reloadAll();
-      // Re-enable the import buttons so a fresh import can be run again.
-      ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime'].forEach(id => {
-        const btn = document.getElementById(id);
-        if(!btn) return;
-        btn.disabled = false;
-        btn.textContent = btn.id === 'import-roster-btn' ? 'Import GD roster'
-          : btn.id === 'import-roster-btn-highway' ? 'Import Highway roster'
-          : btn.id === 'import-roster-btn-tou' ? 'Import TOU roster'
-          : 'Import CIU roster';
-      });
-    });
   });
 
   /* ---------- Ranks reference sheet (single unified list) ---------- */
