@@ -822,7 +822,7 @@
         <span class="pill" id="entry-count-label-students">0 rows</span>
         <div class="spacer"></div>
       </div>
-      <div class="rank-note">Everyone currently ranked Student Police Officer, pulled automatically from every division. Use Promote to advance them once training is complete.</div>
+      <div class="rank-note">Everyone currently ranked student, pulled automatically from every division. Use Promote to advance them once training is complete.</div>
       <div class="grid-scroll"><table class="grid">
         <thead>
           <tr>
@@ -1010,7 +1010,7 @@
     "Chief Superintendent","Superintendent","Chief Inspector",
     "Inspector","Senior Sergeant","Incremental Sergeant","Sergeant",
     "Leading Senior Constable","Incremental Senior Constable","Senior Constable",
-    "Constable","Probationary Constable","Student Police Officer"
+    "Constable","Probationary Constable","student"
   ];
   // General duties carries one extra rank, Police liaison, that no other
   // division has — it isn't part of the shared command ladder.
@@ -1045,7 +1045,7 @@
       "Senior Constable": { prefix, base: opts.seniorConstable },
       ...(opts.constable != null ? { "Constable": { prefix, base: opts.constable } } : {}),
       ...(opts.probationaryConstable != null ? { "Probationary Constable": { prefix, base: opts.probationaryConstable } } : {}),
-      ...(opts.student != null ? { "Student Police Officer": { prefix, base: opts.student } } : {})
+      ...(opts.student != null ? { "student": { prefix, base: opts.student } } : {})
     };
   }
   const DIVISION_RANK_CODES = {
@@ -1489,7 +1489,7 @@
     openFtoPop(btn, btn.getAttribute('data-div'), btn.getAttribute('data-id'));
   });
 
-  /* ---------- Student checklist — auto roster of Student Police Officers ---------- */
+  /* ---------- Student checklist — auto roster of students ---------- */
   /* ---------- Promotion checklist modal ---------- */
   const CHECKLIST_ITEMS = [
     "Driving skills",
@@ -1574,11 +1574,11 @@
     const q = document.getElementById('search-box').value.trim().toLowerCase();
     const rows = [];
     (entriesByDivision.shared || []).forEach(e => {
-      if(e.rank === 'Student Police Officer') rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'All divisions' });
+      if(e.rank === 'student') rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'All divisions' });
     });
     DIVISION_KEYS.forEach(k => {
       (entriesByDivision[k] || []).forEach(e => {
-        if(e.rank === 'Student Police Officer') rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
+        if(e.rank === 'student') rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
       });
     });
     const filtered = rows
@@ -1592,7 +1592,7 @@
     if(filtered.length === 0){
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      tr.innerHTML = `<td colspan="7">No one is currently ranked Student Police Officer.</td>`;
+      tr.innerHTML = `<td colspan="7">No one is currently ranked student.</td>`;
       body.appendChild(tr);
       return;
     }
@@ -1863,7 +1863,7 @@
     const p = currentUser.perms || {};
     const editInfo = p.canEditOfficerInfo;
     filtered.forEach(e => {
-      const canPromoteThis = p.canPromoteAny || (e.rank === 'Student Police Officer' && p.canPromoteStudent);
+      const canPromoteThis = p.canPromoteAny || (e.rank === 'student' && p.canPromoteStudent);
       const tr = document.createElement('tr');
       tr.className = 'data-row';
       tr.setAttribute('data-row-id', e.id);
