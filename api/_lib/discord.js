@@ -33,8 +33,13 @@ async function fetchGuildMember(guildId, userId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` }
   });
-  if (res.status === 404) return null; // user isn't a member of the guild
-  if (!res.ok) throw new Error('Failed to fetch guild member: ' + res.status);
+  if (res.status === 404) {
+    // Logged so a "not a member" login failure can be diagnosed from
+    // Vercel logs — shows exactly which guild/user Discord said no to.
+    console.error('fetchGuildMember: Discord returned 404 (not a member) for guildId=' + guildId + ' userId=' + userId);
+    return null;
+  }
+  if (!res.ok) throw new Error('Failed to fetch guild member: ' + res.status + ' ' + (await res.text()));
   return res.json();
 }
 
