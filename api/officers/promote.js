@@ -20,8 +20,8 @@ module.exports = async (req, res) => {
   if (!id || !listKey || !rank) return res.status(400).json({ error: 'Missing required fields' });
 
   // Senior Sergeant+ can promote anyone. Senior FTO+ can only promote
-  // an officer whose CURRENT rank is Student Police Officer.
-  const isStudentPromotion = currentRank === 'Student Police Officer';
+  // an officer whose CURRENT rank is student.
+  const isStudentPromotion = currentRank === 'student';
   const allowed = session.perms.canPromoteAny || (isStudentPromotion && session.perms.canPromoteStudent);
   if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
 
