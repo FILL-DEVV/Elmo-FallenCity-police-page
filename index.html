@@ -2522,10 +2522,31 @@
   }
   renderRankGrid();
 
+  // Auto-runs each division's roster import the first time its own list is
+  // empty, so the seeded roster shows up without anyone pressing the
+  // Import button. Once a division has any of its own entries, this
+  // leaves it alone — it only fires for a genuinely empty division.
+  function autoImportIfEmpty(){
+    const p = currentUser.perms || {};
+    if(!p.canImportRoster) return;
+    const jobs = [
+      { key: 'general', btn: 'import-roster-btn' },
+      { key: 'highway', btn: 'import-roster-btn-highway' },
+      { key: 'tou', btn: 'import-roster-btn-tou' },
+      { key: 'crime', btn: 'import-roster-btn-crime' }
+    ];
+    jobs.forEach(job => {
+      if((entriesByDivision[job.key] || []).length === 0){
+        const btn = document.getElementById(job.btn);
+        if(btn && !btn.disabled) btn.click();
+      }
+    });
+  }
+
   /* ---------- Initial load + realtime sync ----------
      Loads the current shared state from Supabase, then subscribes to
      changes so every open tab stays in sync when anyone else edits. */
-  loadAuth().then(reloadAll);
+  loadAuth().then(reloadAll).then(autoImportIfEmpty);
   sb.channel('officers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'officers' }, () => { reloadAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_log' }, () => { reloadAll(); })
