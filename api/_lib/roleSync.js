@@ -30,16 +30,13 @@ function roleNameFor(rank, listKey) {
   return `${tag} - ${rank}`;
 }
 
-// Removes the officer's old rank role (if any) and adds the new one,
-// matched by exact name (case-insensitive) against the server's actual
-// roles. Never throws — failures (no Discord ID on file, role missing on
-// the server, member left the guild, etc.) are logged and swallowed, so
-// a role-sync problem never blocks the roster update itself.
-async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
+// Removes a member's old named role (if any) and adds a new named role (if
+// any), matched by exact name (case-insensitive) against the server's
+// actual roles. Never throws — failures (no Discord ID on file, role
+// missing on the server, member left the guild, etc.) are logged and
+// swallowed, so a role-sync problem never blocks the roster update itself.
+async function swapNamedRole({ guildId, botToken, discordUserId, oldName, newName }) {
   if (!isDiscordId(discordUserId)) return;
-
-  const oldName = roleNameFor(oldRank, oldListKey);
-  const newName = roleNameFor(newRank, newListKey);
   if (oldName === newName) return; // nothing to change
 
   let roles;
@@ -71,4 +68,24 @@ async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldList
   }
 }
 
-module.exports = { roleNameFor, syncRankRole };
+// Removes the officer's old rank role (if any) and adds the new one.
+async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
+  await swapNamedRole({
+    guildId, botToken, discordUserId,
+    oldName: roleNameFor(oldRank, oldListKey),
+    newName: roleNameFor(newRank, newListKey)
+  });
+}
+
+// Removes the officer's old FTO-status role (if any) and adds the new one.
+// FTO status values ("FTO", "Senior FTO", "Lead FTO", "FTO Director",
+// "Head Of Academy") are assumed to match the Discord role names exactly.
+async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValue }) {
+  await swapNamedRole({
+    guildId, botToken, discordUserId,
+    oldName: oldValue || null,
+    newName: newValue || null
+  });
+}
+
+module.exports = { roleNameFor, syncRankRole, syncFtoRole };
