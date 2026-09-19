@@ -7,7 +7,7 @@ const TIER1_ROLES = [
   'inspector', 'senior sergeant'
 ];
 const TIER2_ROLES = ['fto'];
-const TIER3_ROLES = ['senior fto', 'lead fto', 'fto director', 'head of academy'];
+const TIER3_ROLES = ['senior fto', 'fto supervisor', 'fto director', 'head of academy'];
 // High Command Team / Commissioners Office — unlocks the Senior Command tab.
 const HIGH_COMMAND_ROLES = ['high command team', 'commissioners office'];
 // Department of Justice — full access to every tab and every action,
