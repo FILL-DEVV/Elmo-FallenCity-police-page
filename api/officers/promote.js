@@ -1,7 +1,7 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { sendChannelMessage } = require('../_lib/discord');
-const { syncRankRole, grantMilestoneRoles } = require('../_lib/roleSync');
+const { syncRankRole, syncMilestoneRoles } = require('../_lib/roleSync');
 
 // #role-request channel — pinned by ID rather than looked up by name.
 // https://discord.com/channels/1401963000935485600/1524244391974404126
@@ -59,14 +59,17 @@ module.exports = async (req, res) => {
       newListKey: listKey
     });
 
-    // Grant the fixed Sergeant / Incremental Sergeant+ milestone roles for
-    // their new rank+division, if applicable. Added only, never removed.
-    await grantMilestoneRoles({
+    // Sync the Sergeant / Incremental Sergeant+ leadership roles — grants
+    // them on promotion into a qualifying rank, strips them on demotion
+    // out of one (or on transferring to a division whose role list differs).
+    await syncMilestoneRoles({
       guildId: process.env.DISCORD_GUILD_ID,
       botToken: process.env.DISCORD_BOT_TOKEN,
       discordUserId: beforeRow.discord,
-      rank,
-      listKey
+      oldRank: beforeRow.rank,
+      oldListKey: beforeRow.list_key,
+      newRank: rank,
+      newListKey: listKey
     });
 
     if (logEntry) {
