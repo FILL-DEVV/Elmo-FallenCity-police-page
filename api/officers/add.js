@@ -1,6 +1,6 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
-const { syncRankRole, grantMilestoneRoles } = require('../_lib/roleSync');
+const { syncRankRole, syncMilestoneRoles } = require('../_lib/roleSync');
 const { sendChannelMessage, addMemberRole, removeMemberRole } = require('../_lib/discord');
 
 // #role-request channel — same one promotions are announced to.
@@ -48,14 +48,17 @@ module.exports = async (req, res) => {
       newListKey: entry.list_key
     });
 
-    // Grant the fixed Sergeant / Incremental Sergeant+ milestone roles if
-    // they're being added directly at that rank or above. Added only.
-    await grantMilestoneRoles({
+    // Grant the fixed Sergeant / Incremental Sergeant+ leadership roles if
+    // they're being added directly at that rank or above (no old state to
+    // strip, since they're brand new).
+    await syncMilestoneRoles({
       guildId: process.env.DISCORD_GUILD_ID,
       botToken: process.env.DISCORD_BOT_TOKEN,
       discordUserId: entry.discord,
-      rank: entry.rank,
-      listKey: entry.list_key
+      oldRank: null,
+      oldListKey: null,
+      newRank: entry.rank,
+      newListKey: entry.list_key
     });
 
     // Fixed onboarding roles: add the standard set, remove the pending one.
