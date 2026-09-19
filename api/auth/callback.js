@@ -2,6 +2,16 @@ const { exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRole
 const { computePermissions } = require('../_lib/permissions');
 const { makeSessionCookie } = require('../_lib/session');
 
+// Pinned to one canonical host rather than built from req.headers.host.
+// Building it dynamically means a visitor on the bare apex domain vs.
+// "www" gets a different redirect_uri sent to Discord — and since the
+// session cookie is host-scoped, a browser that normalizes/redirects
+// between the two differently at any point in the OAuth flow can end up
+// with a cookie set for one host while browsing the other, so login
+// silently doesn't "stick". This must exactly match the redirect URI
+// registered in the Discord Developer Portal.
+const CALLBACK_URL = 'https://www.fallenpd.com/api/auth/callback';
+
 module.exports = async (req, res) => {
   const code = req.query && req.query.code;
   if (!code) {
@@ -10,12 +20,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const redirectUri = `https://${req.headers.host}/api/auth/callback`;
     const tokenData = await exchangeCodeForToken({
       code,
       clientId: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      redirectUri
+      redirectUri: CALLBACK_URL
     });
 
     const user = await fetchDiscordUser(tokenData.access_token);
@@ -47,7 +56,10 @@ module.exports = async (req, res) => {
       perms
     });
     res.setHeader('Set-Cookie', cookie);
-    res.writeHead(302, { Location: '/' });
+    // Redirect to the same canonical host the cookie was set for, so a
+    // browser that arrived via a different host variant still lands
+    // somewhere the cookie is actually valid.
+    res.writeHead(302, { Location: 'https://www.fallenpd.com/' });
     res.end();
   } catch (err) {
     console.error('Discord auth callback error:', err);
