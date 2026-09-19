@@ -1285,6 +1285,18 @@
     return (DIVISIONS[listKey] && DIVISIONS[listKey].label) || listKey;
   }
 
+  // Division tag used specifically in #role-request announcements — mirrors
+  // the server's Discord role naming, where Chief Inspector and above plus
+  // Police liaison always announce as "High Command Team" regardless of
+  // which division tab they're actually logged under.
+  const HCT_ANNOUNCE_RANKS = new Set([
+    'Commissioner','Deputy Commissioner','Assistant Commissioner',
+    'Chief Superintendent','Superintendent','Chief Inspector','Police liaison'
+  ]);
+  function announceDivisionLabel(rank, listKey){
+    return HCT_ANNOUNCE_RANKS.has(rank) ? 'High Command Team' : divisionLabelFor(listKey);
+  }
+
   // Which array a rank's entries live in: the shared executive bucket for
   // Commissioner–Chief Inspector, otherwise the division's own list.
   function listKeyFor(divKey, rank){ return EXEC_CODES[rank] ? 'shared' : divKey; }
@@ -1896,7 +1908,7 @@
     timeField.value = '';
     callsignField.focus();
     callsignField.select();
-    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank), divisionLabel: divisionLabelFor(listKeyFor(divKey, entry.rank)) });
+    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank), divisionLabel: announceDivisionLabel(entry.rank, listKeyFor(divKey, entry.rank)) });
     await reloadAll();
     callsignField.value = nextCallsignForRank(divKey, rankVal);
   }
@@ -2125,7 +2137,7 @@
       callsign: newCallsign,
       rank: newRank,
       time: newTime,
-      toDivisionLabel: divisionLabelFor(newListKey),
+      toDivisionLabel: announceDivisionLabel(newRank, newListKey),
       logEntry: changed ? {
         id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
         name: entry.unit || entry.callsign,
