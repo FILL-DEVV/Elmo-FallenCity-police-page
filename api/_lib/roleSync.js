@@ -29,7 +29,7 @@ const RANK_LADDER = [
   'Chief Superintendent', 'Superintendent', 'Chief Inspector',
   'Inspector', 'Senior Sergeant', 'Incremental Sergeant', 'Sergeant',
   'Leading Senior Constable', 'Incremental Senior Constable', 'Senior Constable',
-  'Constable', 'Probationary Constable', 'Student Police Officer'
+  'Constable', 'Probationary Constable', 'student'
 ];
 const RANK_ORDER = Object.fromEntries(RANK_LADDER.map((r, i) => [r, i]));
 const INCREMENTAL_SERGEANT_INDEX = RANK_ORDER['Incremental Sergeant'];
@@ -64,7 +64,7 @@ function isDiscordId(v) {
 // swapped independently on promotion.
 
 // The rank role name is assumed to match the app's rank string exactly
-// (e.g. "Senior Constable", "Chief Inspector", "Police liaison").
+// (e.g. "Senior Constable", "Chief Inspector", "Police liaison", "student").
 function rankRoleName(rank) {
   return rank || null;
 }
