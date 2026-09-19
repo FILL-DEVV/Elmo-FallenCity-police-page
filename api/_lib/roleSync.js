@@ -1,6 +1,6 @@
 const { fetchGuildRoles, addMemberRole, removeMemberRole } = require('./discord');
 
-// Ranks that always use "High Command Team" as their role's division tag,
+// Ranks that always use "High Command Team" as their division-tag role,
 // regardless of which division they're actually logged under.
 const HCT_RANKS = new Set([
   'Commissioner', 'Deputy Commissioner', 'Assistant Commissioner',
@@ -8,8 +8,8 @@ const HCT_RANKS = new Set([
   'Police liaison'
 ]);
 
-// Maps the app's internal list_key to the exact division name used in
-// Discord role names.
+// Maps the app's internal list_key to the exact division role name on
+// the server.
 const DIVISION_ROLE_TAG = {
   general: 'General Duties',
   highway: 'Highway Patrol',
@@ -21,13 +21,22 @@ function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
 }
 
-// Builds the exact Discord role name for a rank + list_key ("Division -
-// Rank"), or null if this combo has no corresponding role (e.g. terminated).
-function roleNameFor(rank, listKey) {
+// Rank and division are two SEPARATE Discord roles (not one combined
+// "Division - Rank" role) — an officer holds both at once, and each is
+// swapped independently on promotion.
+
+// The rank role name is assumed to match the app's rank string exactly
+// (e.g. "Senior Constable", "Chief Inspector", "Police liaison").
+function rankRoleName(rank) {
+  return rank || null;
+}
+
+// The division-tag role name — "High Command Team" for exec ranks and
+// Police liaison, otherwise the officer's actual division — or null if
+// this rank/list_key combo has no division role (e.g. terminated).
+function divisionRoleName(rank, listKey) {
   if (!rank) return null;
-  const tag = HCT_RANKS.has(rank) ? 'High Command Team' : DIVISION_ROLE_TAG[listKey];
-  if (!tag) return null;
-  return `${tag} - ${rank}`;
+  return HCT_RANKS.has(rank) ? 'High Command Team' : (DIVISION_ROLE_TAG[listKey] || null);
 }
 
 // Removes a member's old named role (if any) and adds a new named role (if
@@ -68,17 +77,26 @@ async function swapNamedRole({ guildId, botToken, discordUserId, oldName, newNam
   }
 }
 
-// Removes the officer's old rank role (if any) and adds the new one.
+// Swaps the officer's rank role AND their division-tag role independently
+// — e.g. moving General Duties - Senior Constable to Tactical Operations
+// Unit - Senior Constable removes/adds only the division role, since the
+// rank role ("Senior Constable") doesn't change; promoting rank within the
+// same division does the reverse.
 async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   await swapNamedRole({
     guildId, botToken, discordUserId,
-    oldName: roleNameFor(oldRank, oldListKey),
-    newName: roleNameFor(newRank, newListKey)
+    oldName: rankRoleName(oldRank),
+    newName: rankRoleName(newRank)
+  });
+  await swapNamedRole({
+    guildId, botToken, discordUserId,
+    oldName: divisionRoleName(oldRank, oldListKey),
+    newName: divisionRoleName(newRank, newListKey)
   });
 }
 
 // Removes the officer's old FTO-status role (if any) and adds the new one.
-// FTO status values ("FTO", "Senior FTO", "Lead FTO", "FTO Director",
+// FTO status values ("FTO", "Senior FTO", "FTO supervisor", "FTO Director",
 // "Head Of Academy") are assumed to match the Discord role names exactly.
 async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValue }) {
   await swapNamedRole({
@@ -88,4 +106,4 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
   });
 }
 
-module.exports = { roleNameFor, syncRankRole, syncFtoRole };
+module.exports = { rankRoleName, divisionRoleName, syncRankRole, syncFtoRole };
