@@ -20,6 +20,10 @@ const EDIT_INFO_ROLES = [
   'commissioner', 'deputy commissioner', 'assistant commissioner',
   'chief superintendent', 'superintendent'
 ];
+// Incremental Sergeant — one tier below Senior Sergeant (TIER1). Gets
+// ONLY the Promote and Terminate buttons, not the rest of TIER1's access
+// (add officers, roster import, clear all, terminated records).
+const INCREMENTAL_SERGEANT_ROLES = ['incremental sergeant'];
 
 function computePermissions(roleNames) {
   const names = (roleNames || []).map(n => String(n).toLowerCase());
@@ -31,16 +35,19 @@ function computePermissions(roleNames) {
   const highCommand = has(HIGH_COMMAND_ROLES); // High Command Team / Commissioned Office
   const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
   const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
+  const incrementalSgt = has(INCREMENTAL_SERGEANT_ROLES); // Incremental Sergeant — promote/terminate only
 
   return {
     tier1, tier2, tier3, highCommand, isDOJ,
     // Full access: add, promote anyone, terminate.
     canAdd: tier1 || tier2 || isDOJ,
-    canTerminate: tier1 || isDOJ,
-    canPromoteAny: tier1 || isDOJ,
+    // Terminate and Promote are also open to Incremental Sergeant, one
+    // tier below the rest of TIER1's access.
+    canTerminate: tier1 || incrementalSgt || isDOJ,
+    canPromoteAny: tier1 || incrementalSgt || isDOJ,
     // Tier 3 (Senior FTO+) can additionally promote officers whose
-    // CURRENT rank is Student Police Officer — checked per-request
-    // against the officer's actual current rank, not assumed here.
+    // CURRENT rank is student — checked per-request against the
+    // officer's actual current rank, not assumed here.
     canPromoteStudent: tier1 || tier3 || isDOJ,
     // FTO (tier2) can edit the promotion checklist, even though they
     // can't perform the promotion itself.
@@ -59,4 +66,4 @@ function computePermissions(roleNames) {
   };
 }
 
-module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES };
+module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES, INCREMENTAL_SERGEANT_ROLES };
