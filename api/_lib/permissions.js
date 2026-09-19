@@ -13,6 +13,13 @@ const HIGH_COMMAND_ROLES = ['high command team', 'commissioners office'];
 // Department of Justice — full access to every tab and every action,
 // overriding all other tiers.
 const DOJ_ROLES = ['department of justice'];
+// Superintendent and above — a narrower slice of TIER1_ROLES (excludes
+// Chief Inspector, Inspector, Senior Sergeant) — can edit an existing
+// officer's name and Discord ID directly on the roster.
+const EDIT_INFO_ROLES = [
+  'commissioner', 'deputy commissioner', 'assistant commissioner',
+  'chief superintendent', 'superintendent'
+];
 
 function computePermissions(roleNames) {
   const names = (roleNames || []).map(n => String(n).toLowerCase());
@@ -23,6 +30,7 @@ function computePermissions(roleNames) {
   const tier3 = has(TIER3_ROLES);       // Senior FTO and above
   const highCommand = has(HIGH_COMMAND_ROLES); // High Command Team / Commissioners Office
   const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
+  const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
 
   return {
     tier1, tier2, tier3, highCommand, isDOJ,
@@ -41,6 +49,9 @@ function computePermissions(roleNames) {
     canClearAll: tier1 || isDOJ,
     canImportRoster: tier1 || isDOJ,
     canAddTerminatedRecord: tier1 || isDOJ,
+    // Superintendent and above (or DOJ) can edit an existing officer's
+    // name and Discord ID directly on the roster grid.
+    canEditOfficerInfo: editInfo || isDOJ,
     // Tab visibility: Academy is FTO-affiliated (FTO or Senior FTO+);
     // Senior Command is High Command Team / Commissioners Office. DOJ sees both.
     canViewAcademy: tier2 || tier3 || isDOJ,
@@ -48,4 +59,4 @@ function computePermissions(roleNames) {
   };
 }
 
-module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES };
+module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES };
