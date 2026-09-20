@@ -707,6 +707,7 @@
   .unit-tab[data-div="highway"].active{ background-color:#E5CF2C46; border-color:#d99a1f; color:#FBE42F; }
   .unit-tab[data-div="tou"].active{ background-color:#6B728050; border-color:#9aa4b8; color:#F6F8FB; }
   .unit-tab[data-div="crime"].active{ background-color:#E06A5F44; border-color:#e06a5f; color:#FF4040; }
+  .unit-tab[data-div="afp"].active{ background-color:#8B5CF640; border-color:#8B5CF6; color:#C4A8FF; }
 
   /* Ranks sheet */
   .rank-note{
@@ -1046,7 +1047,7 @@
   // Callsign block assigned per rank, per division. Police liaison through
   // Chief Inspector are force-wide executive ranks and share the same
   // PL/COM/CMD blocks in every division. Inspector and below use a
-  // division-specific prefix (GD / TRF / TOU / CIU).
+  // division-specific prefix (GD / TRF / TOU / CIU / AFP).
   const EXEC_CODES = {
     "Police liaison": { prefix: "PL", base: 100 },
     "Commissioner": { prefix: "COM", base: 100 },
@@ -1089,6 +1090,11 @@
     crime: divisionCodes("CIU", {
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
       leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500
+    }),
+    afp: divisionCodes("AFP", {
+      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
+      constable: 600
     })
   };
 
@@ -1114,6 +1120,11 @@
       label: "Criminal Investigations Unit",
       note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the shared executive ranks, then its own CIU callsign blocks from Inspector down to Senior Constable. Constable, Probationary Constable and Student aren't coded for this division yet.",
       ranks: RANKS
+    },
+    afp: {
+      label: "AFP",
+      note: "AFP uses the shared executive ranks, then its own AFP callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"AFP\" rank rather than the PD ladder.",
+      ranks: ["AFP", ...RANKS]
     }
   };
   const DIVISION_KEYS = Object.keys(DIVISIONS);
@@ -1206,7 +1217,7 @@
     DIVISION_KEYS.forEach(key => {
       const row = document.getElementById('entry-row-' + key);
       if(row) row.style.display = p.canAdd ? '' : 'none';
-      ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime'].forEach(id => {
+      ['import-roster-btn','import-roster-btn-highway','import-roster-btn-tou','import-roster-btn-crime','import-roster-btn-afp'].forEach(id => {
         const b = document.getElementById(id);
         if(b) b.style.display = p.canImportRoster ? '' : 'none';
       });
@@ -1673,6 +1684,7 @@
         ${key === 'highway' ? `<button class="btn" id="import-roster-btn-highway" type="button">Import Highway roster</button>` : ''}
         ${key === 'tou' ? `<button class="btn" id="import-roster-btn-tou" type="button">Import TOU roster</button>` : ''}
         ${key === 'crime' ? `<button class="btn" id="import-roster-btn-crime" type="button">Import CIU roster</button>` : ''}
+        ${key === 'afp' ? `<button class="btn" id="import-roster-btn-afp" type="button">Import AFP roster</button>` : ''}
         <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
       </div>
 
@@ -2241,15 +2253,15 @@
 
   // Roster import, refreshed from the live "Fallen City PD Roster" Google
   // Sheet (General Duties / Highway Patrol / Tactical Operations Unit /
-  // Criminal Intelligence Unit tabs). Unlike the original import, callsigns
-  // and promotion dates come straight from the sheet instead of being
-  // auto-generated. Rows with no name filled in were left out as reserved
-  // slots, not real officers — including a couple of rows that shared a
-  // Discord ID with a named row elsewhere but had no name of their own.
-  // A few rank names were corrected for spelling ("Superintendant" →
-  // "Superintendent", "Seregant" → "Sergeant", etc). The sheet calls the
-  // last division "Criminal Intelligence Unit"; the app's existing
-  // "Criminal Investigations Unit" tab/label was kept as-is.
+  // Criminal Intelligence Unit / AFP tabs). Unlike the original import,
+  // callsigns and promotion dates come straight from the sheet instead of
+  // being auto-generated. Rows with no name filled in were left out as
+  // reserved slots, not real officers — including a couple of rows that
+  // shared a Discord ID with a named row elsewhere but had no name of
+  // their own. A few rank names were corrected for spelling
+  // ("Superintendant" → "Superintendent", "Seregant" → "Sergeant", etc).
+  // The sheet calls the last division "Criminal Intelligence Unit"; the
+  // app's existing "Criminal Investigations Unit" tab/label was kept as-is.
   const GD_ROSTER_IMPORT = [
     { rank: "Police liaison", first: "Abdual", last: "Alaziz", callsign: "PL-100", promo: "Heath Sharr", date: "02/09/26", discord: "348775132321284096" },
     { rank: "Police liaison", first: "Monzy", last: "Wonzy", callsign: "PL-200", promo: "Heath Sharr", date: "03/09/26", discord: "393886599508656130" },
@@ -2343,6 +2355,22 @@
     { rank: "Senior Constable", first: "Jakell", last: "Dumass", callsign: "CIU-701", promo: "Saint Yoza", date: "31/08/26", discord: "1072743291919024219" }
   ];
 
+  // AFP (Australian Federal Police) — federal-government liaisons rather
+  // than regular PD ranks, so every row is logged with the flat "AFP"
+  // rank instead of the usual ladder. The sheet has no induction-date
+  // column, so time is left blank. Two reserved slots (AFP-09, AFP-10)
+  // had no name filled in and were left out, same as other imports.
+  const AFP_ROSTER_IMPORT = [
+    { rank: "AFP", first: "TamaTi", last: "Uce", callsign: "AFP-01", promo: "Federal Government", date: "", discord: "525860930874114055" },
+    { rank: "AFP", first: "Kuto", last: "Woo", callsign: "AFP-02", promo: "Federal Government", date: "", discord: "908254639730864159" },
+    { rank: "AFP", first: "Envica", last: "", callsign: "AFP-03", promo: "Federal Government", date: "", discord: "884422557888036917" },
+    { rank: "AFP", first: "Heath", last: "Sharr", callsign: "AFP-04", promo: "Federal Government", date: "", discord: "1177206388188008518" },
+    { rank: "AFP", first: "Lockie", last: "Jiff", callsign: "AFP-05", promo: "Federal Government", date: "", discord: "1531531214006128773" },
+    { rank: "AFP", first: "Nyx", last: "Sinclair", callsign: "AFP-06", promo: "Federal Government", date: "", discord: "1241159504209514569" },
+    { rank: "AFP", first: "Lq", last: "", callsign: "AFP-07", promo: "Federal Government", date: "", discord: "881678557070364713" },
+    { rank: "AFP", first: "Mazie", last: "", callsign: "AFP-08", promo: "Federal Government", date: "", discord: "894206285791256576" }
+  ];
+
   // Converts the sheet's DD/MM/YY or DD/MM/YYYY dates to the app's
   // YYYY-MM-DD format. Returns '' for missing/unrecognized dates.
   function parseAuDate(str){
@@ -2391,6 +2419,7 @@
   wireRosterImport('import-roster-btn-highway', 'highway', HWY_ROSTER_IMPORT);
   wireRosterImport('import-roster-btn-tou', 'tou', TOU_ROSTER_IMPORT);
   wireRosterImport('import-roster-btn-crime', 'crime', CIU_ROSTER_IMPORT);
+  wireRosterImport('import-roster-btn-afp', 'afp', AFP_ROSTER_IMPORT);
 
   /* ---------- Terminated officers sheet (standalone, not a division) ---------- */
   let terminatedSortDir = 'desc';
@@ -2540,7 +2569,8 @@
       { key: 'general', btn: 'import-roster-btn' },
       { key: 'highway', btn: 'import-roster-btn-highway' },
       { key: 'tou', btn: 'import-roster-btn-tou' },
-      { key: 'crime', btn: 'import-roster-btn-crime' }
+      { key: 'crime', btn: 'import-roster-btn-crime' },
+      { key: 'afp', btn: 'import-roster-btn-afp' }
     ];
     jobs.forEach(job => {
       if((entriesByDivision[job.key] || []).length === 0){
