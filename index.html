@@ -712,7 +712,6 @@
   .unit-tab[data-div="tou"].active{ background-color:#6B728050; border-color:#9aa4b8; color:#F6F8FB; }
   .unit-tab[data-div="crime"].active{ background-color:#E06A5F44; border-color:#e06a5f; color:#FF4040; }
   .unit-tab[data-div="afp"].active{ background-color:#8B5CF640; border-color:#8B5CF6; color:#C4A8FF; }
-  .unit-tab[data-div="highcommand"].active{ background-color:#F6F8FB2E; border-color:#f0b840; color:#f0b840; }
   .unit-tab[data-div="srcmd"].active{ background-color:#ff6b5e2E; border-color:#ff6b5e; color:#ff6b5e; }
 
   /* Ranks sheet */
@@ -1168,9 +1167,10 @@
       leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
       constable: 600
     }),
-    // High Command's ranks are exactly the exec ranks, which already
-    // have PD-wide PL/COM/CMD codes defined above — no extra codes needed.
-    highcommand: EXEC_CODES
+    // Senior command isn't a real division (not in DIVISIONS/DIVISION_KEYS),
+    // but it IS a valid Promote-popover target for the exec ranks, which
+    // already have PD-wide PL/COM/CMD codes defined above.
+    srcmd: EXEC_CODES
   };
 
   // One config drives both the per-division log sheets and the Ranks
@@ -1178,7 +1178,7 @@
   const DIVISIONS = {
     general: {
       label: "General duties",
-      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) live under the High Command division.",
+      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) are promoted via Senior command.",
       ranks: GD_RANKS
     },
     highway: {
@@ -1200,11 +1200,6 @@
       label: "AFP",
       note: "AFP uses its own AFP callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"AFP\" rank rather than the PD ladder.",
       ranks: ["AFP", ...GD_RANKS]
-    },
-    highcommand: {
-      label: "High Command",
-      note: "Police liaison through Chief Inspector — the force-wide executive ranks, shared across every division. Only visible to, and promotable into by, existing High Command members.",
-      ranks: EXEC_RANKS
     }
   };
   const DIVISION_KEYS = Object.keys(DIVISIONS);
@@ -1221,7 +1216,7 @@
      from Supabase; every mutation writes to Supabase first, then calls
      reloadAll() so this tab (and every other open tab, via realtime)
      ends up showing the same data. */
-  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], highcommand: [], terminated: [] };
+  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
   let promotionLog = [];
   let loadError = false;
 
@@ -1313,28 +1308,20 @@
       activateSheet('sheet-callsigns');
     }
 
-    // High Command is only visible to, and only promotable into by,
-    // existing High Command members (or DOJ). Hides both its Callsigns
-    // sub-tab/sheet and disables it as a choice in the Promote popover.
-    const hcTab = document.querySelector('#callsigns-tabstrip .unit-tab[data-div="highcommand"]');
-    if(hcTab) hcTab.style.display = p.canViewHighCommand ? '' : 'none';
-    // If High Command was the active Callsigns sub-tab and just got hidden,
-    // fall back to General duties.
-    if(hcTab && hcTab.style.display === 'none' && hcTab.classList.contains('active')){
-      activateCallsignDivision(DIVISION_KEYS[0]);
-    }
-    const hcPromoteOption = promoteDivisionSelect.querySelector('option[value="highcommand"]');
-    if(hcPromoteOption) hcPromoteOption.disabled = !p.canViewHighCommand;
-
-    // Senior command is a read-only aggregate of the same High Command
-    // Team / Commissioned Office ranks — gated behind the same
-    // permission so it can't be used to see exec officers around the
-    // High Command tab's own restriction.
+    // Senior command is a read-only aggregate view of the High Command
+    // Team / Commissioned Office ranks (exec ranks plus Inspector /
+    // Senior Sergeant across every division), and also the Promote-
+    // popover target for the exec ranks — both gated to the same
+    // permission.
     const srcmdTab = document.querySelector('#callsigns-tabstrip .unit-tab[data-div="srcmd"]');
     if(srcmdTab) srcmdTab.style.display = p.canViewHighCommand ? '' : 'none';
     if(srcmdTab && srcmdTab.style.display === 'none' && srcmdTab.classList.contains('active')){
       activateCallsignDivision(DIVISION_KEYS[0]);
     }
+    const srcmdPromoteOption = promoteDivisionSelect.querySelector('option[value="srcmd"]');
+    if(srcmdPromoteOption) srcmdPromoteOption.disabled = !p.canViewHighCommand;
+    const srcmdEntryRow = document.getElementById('entry-row-srcmd');
+    if(srcmdEntryRow) srcmdEntryRow.style.display = (p.canAdd && p.canViewHighCommand) ? '' : 'none';
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1363,7 +1350,7 @@
     const { data, error } = await sb.from('officers').select('*');
     if(error){ console.error('Could not load officers', error); loadError = true; return; }
     loadError = false;
-    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], highcommand: [], terminated: [] };
+    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
     (data || []).forEach(row => {
       const key = STORAGE_KEYS.includes(row.list_key) ? row.list_key : 'general';
       out[key].push(rowToEntry(row));
@@ -1774,6 +1761,88 @@
   const callsignsTabstripEl = document.getElementById('callsigns-tabstrip');
   let activeCallsignDiv = DIVISION_KEYS[0];
 
+  // "Senior command" — built first so its tab appears before every real
+  // division's tab. Not a real division (not in DIVISIONS/DIVISION_KEYS):
+  // its own list_key never holds anything (exec ranks always route to the
+  // shared bucket via listKeyFor), so this is a read-only AGGREGATE view
+  // (shared exec bucket + every division's own Inspector/Senior Sergeant
+  // rows) with its own Add-officer row limited to the exec ranks — the
+  // exec-rank equivalent of adding straight into a division, restoring
+  // what a since-removed separate "High Command" division used to do.
+  const srcmdSheet = document.createElement('div');
+  srcmdSheet.className = 'sheet';
+  srcmdSheet.id = 'sheet-srcmd';
+  srcmdSheet.innerHTML = `
+    <div class="toolbar-row">
+      <span class="pill" id="entry-count-label-srcmd">0 rows</span>
+      <span class="pill" id="filtered-count-pill-srcmd"></span>
+      <div class="spacer"></div>
+      <button class="btn" id="export-btn-srcmd" type="button">Export .csv</button>
+    </div>
+    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. Adding an officer here logs them straight at an exec rank (Police liaison through Chief Inspector); Inspector and Senior Sergeant are added from their real division tab instead.</div>
+
+    <div class="quickadd" id="entry-row-srcmd">
+      <div class="quickadd-title">+ New Officer Entry</div>
+      <div class="quickadd-fields">
+        <div class="qcell">
+          <label>Callsign</label>
+          <input id="f-callsign-srcmd" placeholder="PL-100" autocomplete="off">
+        </div>
+        <div class="qcell">
+          <label>Rank</label>
+          <select id="f-rank-srcmd"></select>
+        </div>
+        <div class="qcell">
+          <label>Officer name</label>
+          <input id="f-unit-srcmd" placeholder="J. Smith" autocomplete="off">
+        </div>
+        <div class="qcell">
+          <label>Discord ID</label>
+          <input id="f-discord-srcmd" placeholder="username" autocomplete="off">
+        </div>
+        <div class="qcell">
+          <label>Inducted date</label>
+          <input id="f-time-srcmd" type="date">
+        </div>
+        <div class="qcell">
+          <label>Promotion officer</label>
+          <input id="f-promo-srcmd" placeholder="J. Doe" autocomplete="off">
+        </div>
+      </div>
+      <div class="quickadd-add-row">
+        <button class="btn primary" id="add-btn-srcmd" type="button">Add officer</button>
+      </div>
+    </div>
+
+    <div class="grid-scroll"><table class="grid">
+      <thead>
+        <tr>
+          <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+          <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-srcmd" type="button">▾</button>
+            <div class="filter-pop" id="rank-filter-pop-srcmd"></div>
+          </span></th>
+          <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+          <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
+          <th class="colhead col-fto"><span class="letter">E</span><span class="fieldname">FTO Status</span></th>
+          <th class="colhead col-discord"><span class="letter">F</span><span class="fieldname">Discord ID</span></th>
+          <th class="colhead col-time"><span class="letter">G</span><span class="fieldname">Inducted date<button class="filter-btn" id="time-sort-btn-srcmd" type="button">↕</button></span></th>
+          <th class="colhead col-promo"><span class="letter">H</span><span class="fieldname">Promotion officer</span></th>
+          <th class="colhead col-actions"><span class="letter">I</span><span class="fieldname">&nbsp;</span></th>
+        </tr>
+      </thead>
+      <tbody id="log-body-srcmd"></tbody>
+    </table></div>
+  `;
+  callsignsDivisionsContainer.appendChild(srcmdSheet);
+
+  const srcmdTabBtn = document.createElement('button');
+  srcmdTabBtn.className = 'unit-tab';
+  srcmdTabBtn.dataset.div = 'srcmd';
+  srcmdTabBtn.textContent = 'Senior command';
+  srcmdTabBtn.type = 'button';
+  srcmdTabBtn.addEventListener('click', () => activateCallsignDivision('srcmd'));
+  callsignsTabstripEl.appendChild(srcmdTabBtn);
+
   DIVISION_KEYS.forEach((key, i) => {
     const div = DIVISIONS[key];
     const sheet = document.createElement('div');
@@ -1854,55 +1923,31 @@
     callsignsTabstripEl.appendChild(tabBtn);
   });
 
-  // "Senior command" — a read-only Callsigns tab (not a real division;
-  // 'srcmd' isn't in DIVISIONS/DIVISION_KEYS, so it never gets its own
-  // Add-officer row or its own list_key). Aggregates the shared exec
-  // bucket plus every division's own Inspector/Senior Sergeant rows —
-  // everyone holding a High Command Team or Commissioned Office rank.
-  const srcmdSheet = document.createElement('div');
-  srcmdSheet.className = 'sheet';
-  srcmdSheet.id = 'sheet-srcmd';
-  srcmdSheet.innerHTML = `
-    <div class="toolbar-row">
-      <span class="pill" id="entry-count-label-srcmd">0 rows</span>
-      <span class="pill" id="filtered-count-pill-srcmd"></span>
-      <div class="spacer"></div>
-      <button class="btn" id="export-btn-srcmd" type="button">Export .csv</button>
-    </div>
-    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. This is a read-only aggregate view; use each officer's real division tab to add new entries.</div>
-    <div class="grid-scroll"><table class="grid">
-      <thead>
-        <tr>
-          <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
-          <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-srcmd" type="button">▾</button>
-            <div class="filter-pop" id="rank-filter-pop-srcmd"></div>
-          </span></th>
-          <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
-          <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
-          <th class="colhead col-fto"><span class="letter">E</span><span class="fieldname">FTO Status</span></th>
-          <th class="colhead col-discord"><span class="letter">F</span><span class="fieldname">Discord ID</span></th>
-          <th class="colhead col-time"><span class="letter">G</span><span class="fieldname">Inducted date<button class="filter-btn" id="time-sort-btn-srcmd" type="button">↕</button></span></th>
-          <th class="colhead col-promo"><span class="letter">H</span><span class="fieldname">Promotion officer</span></th>
-          <th class="colhead col-actions"><span class="letter">I</span><span class="fieldname">&nbsp;</span></th>
-        </tr>
-      </thead>
-      <tbody id="log-body-srcmd"></tbody>
-    </table></div>
-  `;
-  callsignsDivisionsContainer.appendChild(srcmdSheet);
-
-  const srcmdTabBtn = document.createElement('button');
-  srcmdTabBtn.className = 'unit-tab';
-  srcmdTabBtn.dataset.div = 'srcmd';
-  srcmdTabBtn.textContent = 'Senior command';
-  srcmdTabBtn.type = 'button';
-  srcmdTabBtn.addEventListener('click', () => activateCallsignDivision('srcmd'));
-  callsignsTabstripEl.appendChild(srcmdTabBtn);
-
   function activateCallsignDivision(divKey){
     document.querySelectorAll('#callsigns-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === divKey));
     document.querySelectorAll('#callsigns-divisions-container .sheet').forEach(s => s.classList.toggle('active', s.id === 'sheet-' + divKey));
     activeCallsignDiv = divKey;
+  }
+
+  // Rank <select> options, Add-officer wiring, and callsign prefill for
+  // Senior command's own quickadd row — kept separate from the
+  // "Wire up each division" DIVISION_KEYS.forEach loop below since
+  // 'srcmd' isn't a real division.
+  {
+    const srcmdRankSelect = document.getElementById('f-rank-srcmd');
+    EXEC_RANKS.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r;
+      srcmdRankSelect.appendChild(opt);
+    });
+    srcmdRankSelect.addEventListener('change', () => {
+      const suggestion = nextCallsignForRank('srcmd', srcmdRankSelect.value);
+      if(suggestion) document.getElementById('f-callsign-srcmd').value = suggestion;
+    });
+    document.getElementById('add-btn-srcmd').addEventListener('click', () => addEntry('srcmd'));
+    document.getElementById('entry-row-srcmd').addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); addEntry('srcmd'); }
+    });
   }
 
   // Academy sub-tabs — currently just FTO LIST, structured so more can be
@@ -2009,15 +2054,13 @@
 
   function renderDivision(divKey){
     const div = DIVISIONS[divKey];
-    // Exec-rank officers now live exclusively under High Command, not
+    // Exec-rank officers live under Senior command's aggregate view, not
     // layered onto every other division's tab. AFP shows nothing but
     // entries actually ranked "AFP"; every other ordinary division shows
     // only its own officers.
     const entries = divKey === 'afp'
       ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'AFP')
-      : divKey === 'highcommand'
-        ? (entriesByDivision.shared || [])
-        : (entriesByDivision[divKey] || []);
+      : (entriesByDivision[divKey] || []);
     // The search bar filters every division at once, not just the active
     // tab, so a name search finds matches across all lists.
     const q = document.getElementById('search-box').value.trim().toLowerCase();
@@ -2076,7 +2119,7 @@
   function getSeniorCommandRows(){
     const rows = [];
     (entriesByDivision.shared || []).forEach(e => {
-      rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'High Command' });
+      rows.push({ entry: e, divKey: 'srcmd', divLabel: 'High Command' });
     });
     ['general', 'highway', 'tou', 'crime'].forEach(k => {
       (entriesByDivision[k] || []).forEach(e => {
@@ -2351,9 +2394,7 @@
     document.getElementById('export-btn-' + key).addEventListener('click', () => {
       const entries = key === 'afp'
         ? (entriesByDivision[key] || []).filter(e => e.rank === 'AFP')
-        : key === 'highcommand'
-          ? (entriesByDivision.shared || [])
-          : (entriesByDivision[key] || []);
+        : (entriesByDivision[key] || []);
       if(entries.length === 0) return;
       const header = ['Callsign','Rank','Officer name','FTO Status','Discord ID','Inducted date','Promotion officer'];
       const rows = entries.slice().sort((a,b) => (a.time||'').localeCompare(b.time||''))
@@ -2391,7 +2432,7 @@
     if(!q) return [];
     const out = [];
     (entriesByDivision.shared || []).forEach(e => {
-      if((e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q)) out.push({ entry: e, divKey: null });
+      if((e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q)) out.push({ entry: e, divKey: 'srcmd' });
     });
     DIVISION_KEYS.forEach(k => {
       (entriesByDivision[k] || []).forEach(e => {
@@ -2413,10 +2454,11 @@
       searchDropdownEl.appendChild(empty);
     } else {
       matches.forEach(m => {
-        const targetKey = m.divKey || activeCallsignDiv;
+        const targetKey = m.divKey;
+        const targetLabel = targetKey === 'srcmd' ? 'Senior command' : DIVISIONS[targetKey].label;
         const div = document.createElement('div');
         div.className = 'search-dropdown-item';
-        div.innerHTML = `<span class="sdi-name">${escapeHtml(m.entry.unit || m.entry.callsign)}</span><span class="sdi-meta">${escapeHtml(m.entry.rank)} · ${escapeHtml(m.entry.callsign)} · ${escapeHtml(DIVISIONS[targetKey].label)}</span>`;
+        div.innerHTML = `<span class="sdi-name">${escapeHtml(m.entry.unit || m.entry.callsign)}</span><span class="sdi-meta">${escapeHtml(m.entry.rank)} · ${escapeHtml(m.entry.callsign)} · ${escapeHtml(targetLabel)}</span>`;
         div.addEventListener('click', () => goToSearchResult(targetKey, m.entry.id));
         searchDropdownEl.appendChild(div);
       });
@@ -2429,6 +2471,7 @@
     searchDropdownEl.classList.remove('open');
     searchDropdownEl.innerHTML = '';
     renderAllDivisions();
+    renderSeniorCommand();
     activateSheet('sheet-callsigns');
     activateCallsignDivision(divKey);
     requestAnimationFrame(() => {
@@ -2455,12 +2498,22 @@
     opt.value = k; opt.textContent = DIVISIONS[k].label;
     promoteDivisionSelect.appendChild(opt);
   });
+  // "Senior command" isn't a real division, but it's still a valid
+  // Promote target for the exec ranks — listed last so it doesn't clutter
+  // the top of an otherwise division-only dropdown.
+  const srcmdPromoteOpt = document.createElement('option');
+  srcmdPromoteOpt.value = 'srcmd';
+  srcmdPromoteOpt.textContent = 'Senior command';
+  promoteDivisionSelect.appendChild(srcmdPromoteOpt);
 
   let promoteTarget = null; // { currentDivKey, id }
 
   function populatePromoteRanks(divKey, selectedRank){
     promoteRankSelect.innerHTML = '';
-    DIVISIONS[divKey].ranks.forEach(r => {
+    // Senior command isn't in DIVISIONS — its only promotable ranks are
+    // the exec ladder (Inspector/Senior Sergeant stay division-specific).
+    const ranks = divKey === 'srcmd' ? EXEC_RANKS : DIVISIONS[divKey].ranks;
+    ranks.forEach(r => {
       const opt = document.createElement('option');
       opt.value = r; opt.textContent = r;
       if(r === selectedRank) opt.selected = true;
@@ -2474,10 +2527,13 @@
     const entry = entriesByDivision[found.listKey][found.idx];
     promoteTarget = { currentDivKey, id };
     // "terminated" isn't a real division to transfer into — default the
-    // popover to General duties when reinstating from that tab.
-    const defaultDivKey = DIVISION_KEYS.includes(currentDivKey) ? currentDivKey : DIVISION_KEYS[0];
+    // popover to General duties when reinstating from that tab. 'srcmd'
+    // (Senior command) is a valid target even though it isn't in
+    // DIVISION_KEYS, so it's allowed through alongside real divisions.
+    const defaultDivKey = (DIVISION_KEYS.includes(currentDivKey) || currentDivKey === 'srcmd') ? currentDivKey : DIVISION_KEYS[0];
     promoteDivisionSelect.value = defaultDivKey;
-    const preselectRank = DIVISIONS[defaultDivKey].ranks.includes(entry.rank) ? entry.rank : null;
+    const defaultDivRanks = defaultDivKey === 'srcmd' ? EXEC_RANKS : DIVISIONS[defaultDivKey].ranks;
+    const preselectRank = defaultDivRanks.includes(entry.rank) ? entry.rank : null;
     populatePromoteRanks(defaultDivKey, preselectRank);
     document.querySelector('.promote-pop-head').textContent = label || 'Promote / transfer';
 
