@@ -61,7 +61,11 @@ function computePermissions(roleNames) {
     // Tab visibility: Academy is FTO-affiliated (FTO or Senior FTO+);
     // Senior Command is High Command Team / Commissioned Office. DOJ sees both.
     canViewAcademy: tier2 || tier3 || isDOJ,
-    canViewSeniorCommand: highCommand || isDOJ
+    canViewSeniorCommand: highCommand || isDOJ,
+    // High Command division (Police liaison through Chief Inspector) —
+    // same audience as Senior Command, kept as its own field since the
+    // two features may diverge later.
+    canViewHighCommand: highCommand || isDOJ
   };
 }
 
