@@ -713,6 +713,7 @@
   .unit-tab[data-div="crime"].active{ background-color:#E06A5F44; border-color:#e06a5f; color:#FF4040; }
   .unit-tab[data-div="afp"].active{ background-color:#8B5CF640; border-color:#8B5CF6; color:#C4A8FF; }
   .unit-tab[data-div="highcommand"].active{ background-color:#F6F8FB2E; border-color:#f0b840; color:#f0b840; }
+  .unit-tab[data-div="srcmd"].active{ background-color:#ff6b5e2E; border-color:#ff6b5e; color:#ff6b5e; }
 
   /* Ranks sheet */
   .rank-note{
@@ -1024,6 +1025,11 @@
     "Constable","Probationary Constable","student"
   ];
   const RANKS = [...EXEC_RANKS, ...NON_EXEC_RANKS];
+  // "Senior command" (a read-only Callsigns tab, not a real division) —
+  // everyone holding a High Command Team or Commissioned Office rank:
+  // the 7 exec ranks plus Inspector and Senior Sergeant, aggregated
+  // across every division.
+  const SENIOR_COMMAND_RANKS = [...EXEC_RANKS, "Inspector", "Senior Sergeant"];
   // General duties and Highway Patrol use the plain non-exec ladder —
   // exec ranks (Police liaison through Chief Inspector) are no longer
   // selectable from any division's own dropdown; they only exist under
@@ -1319,6 +1325,16 @@
     }
     const hcPromoteOption = promoteDivisionSelect.querySelector('option[value="highcommand"]');
     if(hcPromoteOption) hcPromoteOption.disabled = !p.canViewHighCommand;
+
+    // Senior command is a read-only aggregate of the same High Command
+    // Team / Commissioned Office ranks — gated behind the same
+    // permission so it can't be used to see exec officers around the
+    // High Command tab's own restriction.
+    const srcmdTab = document.querySelector('#callsigns-tabstrip .unit-tab[data-div="srcmd"]');
+    if(srcmdTab) srcmdTab.style.display = p.canViewHighCommand ? '' : 'none';
+    if(srcmdTab && srcmdTab.style.display === 'none' && srcmdTab.classList.contains('active')){
+      activateCallsignDivision(DIVISION_KEYS[0]);
+    }
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1362,6 +1378,7 @@
   async function reloadAll(){
     await Promise.all([reloadOfficers(), reloadPromotions()]);
     renderAllDivisions();
+    renderSeniorCommand();
     renderTerminated();
     renderAcademy();
     renderStudentChecklist();
@@ -1837,6 +1854,51 @@
     callsignsTabstripEl.appendChild(tabBtn);
   });
 
+  // "Senior command" — a read-only Callsigns tab (not a real division;
+  // 'srcmd' isn't in DIVISIONS/DIVISION_KEYS, so it never gets its own
+  // Add-officer row or its own list_key). Aggregates the shared exec
+  // bucket plus every division's own Inspector/Senior Sergeant rows —
+  // everyone holding a High Command Team or Commissioned Office rank.
+  const srcmdSheet = document.createElement('div');
+  srcmdSheet.className = 'sheet';
+  srcmdSheet.id = 'sheet-srcmd';
+  srcmdSheet.innerHTML = `
+    <div class="toolbar-row">
+      <span class="pill" id="entry-count-label-srcmd">0 rows</span>
+      <span class="pill" id="filtered-count-pill-srcmd"></span>
+      <div class="spacer"></div>
+      <button class="btn" id="export-btn-srcmd" type="button">Export .csv</button>
+    </div>
+    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. This is a read-only aggregate view; use each officer's real division tab to add new entries.</div>
+    <div class="grid-scroll"><table class="grid">
+      <thead>
+        <tr>
+          <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+          <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-srcmd" type="button">▾</button>
+            <div class="filter-pop" id="rank-filter-pop-srcmd"></div>
+          </span></th>
+          <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+          <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
+          <th class="colhead col-fto"><span class="letter">E</span><span class="fieldname">FTO Status</span></th>
+          <th class="colhead col-discord"><span class="letter">F</span><span class="fieldname">Discord ID</span></th>
+          <th class="colhead col-time"><span class="letter">G</span><span class="fieldname">Inducted date<button class="filter-btn" id="time-sort-btn-srcmd" type="button">↕</button></span></th>
+          <th class="colhead col-promo"><span class="letter">H</span><span class="fieldname">Promotion officer</span></th>
+          <th class="colhead col-actions"><span class="letter">I</span><span class="fieldname">&nbsp;</span></th>
+        </tr>
+      </thead>
+      <tbody id="log-body-srcmd"></tbody>
+    </table></div>
+  `;
+  callsignsDivisionsContainer.appendChild(srcmdSheet);
+
+  const srcmdTabBtn = document.createElement('button');
+  srcmdTabBtn.className = 'unit-tab';
+  srcmdTabBtn.dataset.div = 'srcmd';
+  srcmdTabBtn.textContent = 'Senior command';
+  srcmdTabBtn.type = 'button';
+  srcmdTabBtn.addEventListener('click', () => activateCallsignDivision('srcmd'));
+  callsignsTabstripEl.appendChild(srcmdTabBtn);
+
   function activateCallsignDivision(divKey){
     document.querySelectorAll('#callsigns-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === divKey));
     document.querySelectorAll('#callsigns-divisions-container .sheet').forEach(s => s.classList.toggle('active', s.id === 'sheet-' + divKey));
@@ -1912,7 +1974,9 @@
   /* ---------- Per-division state + rendering ---------- */
   const rankFilterValue = {};   // divKey -> selected rank or ''
   const timeSortDir = {};       // divKey -> 'asc' | 'desc'
-  DIVISION_KEYS.forEach(k => { rankFilterValue[k] = ''; timeSortDir[k] = 'desc'; });
+  // 'srcmd' (the Senior command Callsigns tab) isn't a real division key,
+  // but shares this same filter/sort state.
+  [...DIVISION_KEYS, 'srcmd'].forEach(k => { rankFilterValue[k] = ''; timeSortDir[k] = 'desc'; });
 
   function buildFilterPop(divKey){
     const div = DIVISIONS[divKey];
@@ -2004,6 +2068,151 @@
     });
   }
   function renderAllDivisions(){ DIVISION_KEYS.forEach(renderDivision); }
+
+  // Rows for the "Senior command" tab: the shared exec bucket plus every
+  // division's own Inspector / Senior Sergeant entries, each tagged with
+  // its REAL division key so promote/FTO/terminate/edit actions look up
+  // and write to the correct underlying record.
+  function getSeniorCommandRows(){
+    const rows = [];
+    (entriesByDivision.shared || []).forEach(e => {
+      rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'High Command' });
+    });
+    ['general', 'highway', 'tou', 'crime'].forEach(k => {
+      (entriesByDivision[k] || []).forEach(e => {
+        if(e.rank === 'Inspector' || e.rank === 'Senior Sergeant'){
+          rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
+        }
+      });
+    });
+    return rows;
+  }
+
+  function buildSeniorCommandFilterPop(){
+    const pop = document.getElementById('rank-filter-pop-srcmd');
+    const btn = document.getElementById('rank-filter-btn-srcmd');
+    pop.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All ranks';
+    allBtn.className = rankFilterValue['srcmd'] === '' ? 'sel' : '';
+    allBtn.addEventListener('click', () => {
+      rankFilterValue['srcmd'] = '';
+      pop.classList.remove('open');
+      btn.classList.remove('active-filter');
+      renderSeniorCommand();
+    });
+    pop.appendChild(allBtn);
+    SENIOR_COMMAND_RANKS.forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r;
+      b.className = rankFilterValue['srcmd'] === r ? 'sel' : '';
+      b.addEventListener('click', () => {
+        rankFilterValue['srcmd'] = r;
+        pop.classList.remove('open');
+        btn.classList.add('active-filter');
+        renderSeniorCommand();
+      });
+      pop.appendChild(b);
+    });
+  }
+
+  function renderSeniorCommand(){
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    const allRows = getSeniorCommandRows();
+    let filtered = allRows
+      .filter(r => !rankFilterValue['srcmd'] || r.entry.rank === rankFilterValue['srcmd'])
+      .filter(r => !q || (r.entry.callsign + ' ' + (r.entry.unit||'')).toLowerCase().includes(q));
+
+    filtered = filtered.sort((a,b) => {
+      const rankCmp = (RANK_ORDER[a.entry.rank] ?? 999) - (RANK_ORDER[b.entry.rank] ?? 999);
+      if(rankCmp !== 0) return rankCmp;
+      const cmp = (a.entry.time||'').localeCompare(b.entry.time||'') || a.entry.created - b.entry.created;
+      return timeSortDir['srcmd'] === 'desc' ? -cmp : cmp;
+    });
+
+    document.getElementById('entry-count-label-srcmd').textContent = allRows.length + (allRows.length === 1 ? ' row' : ' rows');
+    document.getElementById('filtered-count-pill-srcmd').textContent = (filtered.length !== allRows.length) ? ('(' + filtered.length + ' shown)') : '';
+
+    const body = document.getElementById('log-body-srcmd');
+    body.innerHTML = '';
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="9">${allRows.length === 0 ? 'No rows yet.' : 'No rows match this search / filter.'}</td>`;
+      body.appendChild(tr);
+      return;
+    }
+
+    const p = currentUser.perms || {};
+    const editInfo = p.canEditOfficerInfo;
+    filtered.forEach(r => {
+      const e = r.entry;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.setAttribute('data-row-id', e.id);
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit${editInfo ? ' editable-cell' : ''}" data-field="unit" data-div="${r.divKey}">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
+        <td class="cell-fto">${escapeHtml(e.fto || '—')}</td>
+        <td class="cell-discord${editInfo ? ' editable-cell' : ''}" data-field="discord" data-div="${r.divKey}">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
+        <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
+        <td class="cell-actions">${p.canPromoteAny ? `<button class="row-promote" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promote / transfer">↑</button>` : ''}${p.canSetFto ? `<button class="row-fto" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Set FTO status">FTO</button>` : ''}${p.canTerminate ? `<button class="row-terminate" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Terminate officer">⛔</button>` : ''}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('rank-filter-btn-srcmd').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    document.querySelectorAll('.filter-pop.open').forEach(p => { if(p.id !== 'rank-filter-pop-srcmd') p.classList.remove('open'); });
+    buildSeniorCommandFilterPop();
+    document.getElementById('rank-filter-pop-srcmd').classList.toggle('open');
+  });
+  document.getElementById('time-sort-btn-srcmd').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    timeSortDir['srcmd'] = timeSortDir['srcmd'] === 'desc' ? 'asc' : 'desc';
+    renderSeniorCommand();
+  });
+  document.getElementById('log-body-srcmd').addEventListener('click', (ev) => {
+    const editableCell = ev.target.closest('td.editable-cell');
+    if(editableCell && !editableCell.querySelector('input')){
+      const tr = editableCell.closest('tr[data-row-id]');
+      if(tr) startInlineEdit(editableCell, editableCell.dataset.div, tr.getAttribute('data-row-id'), editableCell.dataset.field);
+      return;
+    }
+    const promoteBtn = ev.target.closest('button.row-promote');
+    if(promoteBtn){
+      openPromotePop(promoteBtn, promoteBtn.getAttribute('data-div'), promoteBtn.getAttribute('data-id'), 'Promote / transfer');
+      return;
+    }
+    const ftoBtn = ev.target.closest('button.row-fto');
+    if(ftoBtn){
+      openFtoPop(ftoBtn, ftoBtn.getAttribute('data-div'), ftoBtn.getAttribute('data-id'));
+      return;
+    }
+    const terminateBtn = ev.target.closest('button.row-terminate');
+    if(terminateBtn){
+      terminateOfficer(terminateBtn.getAttribute('data-div'), terminateBtn.getAttribute('data-id'));
+      return;
+    }
+  });
+  document.getElementById('export-btn-srcmd').addEventListener('click', () => {
+    const rows0 = getSeniorCommandRows();
+    if(rows0.length === 0) return;
+    const header = ['Callsign','Rank','Officer name','Division','FTO Status','Discord ID','Inducted date','Promotion officer'];
+    const rows = rows0.slice().sort((a,b) => (a.entry.time||'').localeCompare(b.entry.time||''))
+      .map(r => [r.entry.callsign, r.entry.rank, r.entry.unit, r.divLabel, r.entry.fto, r.entry.discord, r.entry.time, r.entry.promo]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'callsign-log-seniorcommand.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
 
   // Click-to-edit for Officer name / Discord ID — restricted to Superintendent
   // and above via canEditOfficerInfo (the "editable-cell" class only gets
@@ -2168,6 +2377,7 @@
 
   document.getElementById('search-box').addEventListener('input', () => {
     renderAllDivisions();
+    renderSeniorCommand();
     renderTerminated();
     renderAcademy();
       renderStudentChecklist();
