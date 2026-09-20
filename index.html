@@ -394,6 +394,10 @@
     white-space:nowrap;
   }
   .rank-badge.tier-exec{background:rgba(217,154,31,0.16); color:var(--amber-deep); border-color:rgba(217,154,31,0.4);}
+  .rank-badge.tier-white{background:rgba(246,248,251,0.14); color:#f6f8fb; border-color:rgba(246,248,251,0.35);}
+  .rank-badge.tier-red{background:rgba(255,64,64,0.14); color:#ff6b5e; border-color:rgba(255,64,64,0.4);}
+  .rank-badge.tier-yellow{background:rgba(251,228,47,0.16); color:#fbe42f; border-color:rgba(251,228,47,0.4);}
+  .rank-badge.tier-sergeant-senior{background:rgba(64,215,240,0.16); color:#40d7f0; border-color:rgba(64,215,240,0.4);}
   .rank-badge.tier-sergeant{background:rgba(74,124,232,0.14); color:#7fa2f0; border-color:rgba(74,124,232,0.35);}
   .rank-badge.tier-constable{background:rgba(93,196,140,0.14); color:#7fd6a5; border-color:rgba(93,196,140,0.35);}
   .rank-badge.tier-other{background:rgba(148,163,184,0.14); color:#b6bfcf; border-color:rgba(148,163,184,0.3);}
@@ -1025,21 +1029,29 @@
   const RANK_ORDER = Object.fromEntries(GD_RANKS.map((r, i) => [r, i]));
 
   // Which color tier a rank's badge gets in the Nightwatch UI.
-  const RANK_TIER_EXEC = new Set([
-    'Commissioner','Deputy Commissioner','Assistant Commissioner',
-    'Chief Superintendent','Superintendent','Chief Inspector','Police liaison'
-  ]);
-  const RANK_TIER_SERGEANT = new Set([
-    'Inspector','Senior Sergeant','Incremental Sergeant','Sergeant'
-  ]);
+  const RANK_TIER_WHITE = new Set(['Commissioner','Deputy Commissioner','Assistant Commissioner']);
+  const RANK_TIER_RED = new Set(['Chief Superintendent','Superintendent','Chief Inspector']);
+  const RANK_TIER_YELLOW = new Set(['Inspector']);
+  // Senior Sergeant gets its own distinct blue, separate from the
+  // Incremental Sergeant / Sergeant blue below.
+  const RANK_TIER_SERGEANT_SENIOR = new Set(['Senior Sergeant']);
+  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','Sergeant']);
   const RANK_TIER_CONSTABLE = new Set([
     'Leading Senior Constable','Incremental Senior Constable','Senior Constable'
   ]);
+  // Police liaison is the only rank left in the amber "exec" tier now that
+  // Commissioner/Deputy/Assistant Commissioner (white) and Chief
+  // Superintendent/Superintendent/Chief Inspector (red) have their own.
+  const RANK_TIER_EXEC = new Set(['Police liaison']);
   function rankBadgeHtml(rank){
     if(!rank) return '—';
-    const cls = RANK_TIER_EXEC.has(rank) ? 'tier-exec'
+    const cls = RANK_TIER_WHITE.has(rank) ? 'tier-white'
+      : RANK_TIER_RED.has(rank) ? 'tier-red'
+      : RANK_TIER_YELLOW.has(rank) ? 'tier-yellow'
+      : RANK_TIER_SERGEANT_SENIOR.has(rank) ? 'tier-sergeant-senior'
       : RANK_TIER_SERGEANT.has(rank) ? 'tier-sergeant'
       : RANK_TIER_CONSTABLE.has(rank) ? 'tier-constable'
+      : RANK_TIER_EXEC.has(rank) ? 'tier-exec'
       : 'tier-other';
     return '<span class="rank-badge ' + cls + '">' + escapeHtml(rank) + '</span>';
   }
@@ -1859,8 +1871,11 @@
   function renderDivision(divKey){
     const div = DIVISIONS[divKey];
     // Shared executive-rank officers appear on every division tab, on top
-    // of that division's own officers.
-    const entries = [...(entriesByDivision.shared || []), ...(entriesByDivision[divKey] || [])];
+    // of that division's own officers — except AFP, which is federal
+    // liaisons only and shows nothing but entries actually ranked "AFP".
+    const entries = divKey === 'afp'
+      ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'AFP')
+      : [...(entriesByDivision.shared || []), ...(entriesByDivision[divKey] || [])];
     // The search bar filters every division at once, not just the active
     // tab, so a name search finds matches across all lists.
     const q = document.getElementById('search-box').value.trim().toLowerCase();
@@ -2047,7 +2062,9 @@
     });
 
     document.getElementById('export-btn-' + key).addEventListener('click', () => {
-      const entries = [...(entriesByDivision.shared || []), ...(entriesByDivision[key] || [])];
+      const entries = key === 'afp'
+        ? (entriesByDivision[key] || []).filter(e => e.rank === 'AFP')
+        : [...(entriesByDivision.shared || []), ...(entriesByDivision[key] || [])];
       if(entries.length === 0) return;
       const header = ['Callsign','Rank','Officer name','FTO Status','Discord ID','Inducted date','Promotion officer'];
       const rows = entries.slice().sort((a,b) => (a.time||'').localeCompare(b.time||''))
