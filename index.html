@@ -712,6 +712,7 @@
   .unit-tab[data-div="tou"].active{ background-color:#6B728050; border-color:#9aa4b8; color:#F6F8FB; }
   .unit-tab[data-div="crime"].active{ background-color:#E06A5F44; border-color:#e06a5f; color:#FF4040; }
   .unit-tab[data-div="afp"].active{ background-color:#8B5CF640; border-color:#8B5CF6; color:#C4A8FF; }
+  .unit-tab[data-div="highcommand"].active{ background-color:#F6F8FB2E; border-color:#f0b840; color:#f0b840; }
 
   /* Ranks sheet */
   .rank-note{
@@ -1009,24 +1010,30 @@
   const SUPABASE_KEY = "sb_publishable_GpxMXE0Yf8C1ujcLi08akQ_l2ZcLcGa";
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const RANKS = [
+  const EXEC_RANKS = [
     "Police liaison",
     "Commissioner","Deputy Commissioner","Assistant Commissioner",
-    "Chief Superintendent","Superintendent","Chief Inspector",
+    "Chief Superintendent","Superintendent","Chief Inspector"
+  ];
+  // Everything below the exec tier — this is what every ordinary
+  // division's dropdown offers now; the exec ranks live exclusively
+  // under the High Command division below.
+  const NON_EXEC_RANKS = [
     "Inspector","Senior Sergeant","Incremental Sergeant","Sergeant",
     "Leading Senior Constable","Incremental Senior Constable","Senior Constable",
     "Constable","Probationary Constable","student"
   ];
-  // Police liaison is now a PD-wide rank (like Commissioner–Chief Inspector),
-  // not a General Duties-only extra, so every division's rank list is the
-  // same shared ladder — GD_RANKS is just an alias kept because the rest of
-  // the app still refers to it by that name.
-  const GD_RANKS = RANKS;
+  const RANKS = [...EXEC_RANKS, ...NON_EXEC_RANKS];
+  // General duties and Highway Patrol use the plain non-exec ladder —
+  // exec ranks (Police liaison through Chief Inspector) are no longer
+  // selectable from any division's own dropdown; they only exist under
+  // the dedicated High Command division below.
+  const GD_RANKS = NON_EXEC_RANKS;
   // CIU and TOU replace the Sergeant-through-Senior-Constable slice of the
   // standard ladder with their own named ranks (Detective / Operator
-  // tracks) — everything from Inspector up through Incremental Sergeant
-  // stays the shared ladder, taken as a slice of RANKS.
-  const SHARED_LADDER_PREFIX = RANKS.slice(0, RANKS.indexOf("Incremental Sergeant") + 1);
+  // tracks) — Inspector through Incremental Sergeant stay the shared
+  // non-exec ladder, taken as a slice of NON_EXEC_RANKS.
+  const SHARED_LADDER_PREFIX = NON_EXEC_RANKS.slice(0, NON_EXEC_RANKS.indexOf("Incremental Sergeant") + 1);
   const CIU_RANKS = [
     ...SHARED_LADDER_PREFIX,
     "Detective Supervisor","Lead Detective","Senior Detective","Detective","Trial Detective"
@@ -1037,14 +1044,15 @@
   ];
   // Position of each rank in the hierarchy, most senior first — used to
   // keep each division's log sorted top-to-bottom by seniority at all
-  // times. Includes every division's rank names (standard ladder plus
-  // CIU's and TOU's renamed ranks) so sorting works regardless of which
-  // division a row belongs to; a division's render only ever mixes its
-  // own rank names with the shared exec ranks, so two divisions' custom
-  // names never actually need to be compared against each other — only
-  // their relative seniority level (matched to the tier they replaced)
-  // matters here.
+  // times. Includes every division's rank names (exec ladder, standard
+  // ladder, plus CIU's and TOU's renamed ranks) so sorting works
+  // regardless of which division a row belongs to; a division's render
+  // only ever mixes its own rank names with the shared exec ranks, so
+  // two divisions' custom names never actually need to be compared
+  // against each other — only their relative seniority level (matched
+  // to the tier they replaced) matters here.
   const RANK_ORDER_LIST = [
+    ...EXEC_RANKS,
     ...SHARED_LADDER_PREFIX,
     "Sergeant","Detective Supervisor","TOU Supervisor",
     "Leading Senior Constable","Lead Detective","Senior Operator",
@@ -1153,7 +1161,10 @@
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
       leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
       constable: 600
-    })
+    }),
+    // High Command's ranks are exactly the exec ranks, which already
+    // have PD-wide PL/COM/CMD codes defined above — no extra codes needed.
+    highcommand: EXEC_CODES
   };
 
   // One config drives both the per-division log sheets and the Ranks
@@ -1161,28 +1172,33 @@
   const DIVISIONS = {
     general: {
       label: "General duties",
-      note: "General duties (GD) uses the shared executive ranks — Police liaison through Chief Inspector — then its own GD callsign blocks from Inspector down.",
+      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) live under the High Command division.",
       ranks: GD_RANKS
     },
     highway: {
       label: "Highway patrol",
-      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the shared executive ranks, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
-      ranks: RANKS
+      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
+      ranks: GD_RANKS
     },
     tou: {
       label: "Tactical Operations Unit",
-      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the shared executive ranks through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Senior Operator, Operator, Trial Operator.",
+      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the standard ladder through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Senior Operator, Operator, Trial Operator.",
       ranks: TOU_RANKS
     },
     crime: {
       label: "Criminal Investigations Unit",
-      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the shared executive ranks through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective.",
+      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the standard ladder through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective.",
       ranks: CIU_RANKS
     },
     afp: {
       label: "AFP",
-      note: "AFP uses the shared executive ranks, then its own AFP callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"AFP\" rank rather than the PD ladder.",
-      ranks: ["AFP", ...RANKS]
+      note: "AFP uses its own AFP callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"AFP\" rank rather than the PD ladder.",
+      ranks: ["AFP", ...GD_RANKS]
+    },
+    highcommand: {
+      label: "High Command",
+      note: "Police liaison through Chief Inspector — the force-wide executive ranks, shared across every division. Only visible to, and promotable into by, existing High Command members.",
+      ranks: EXEC_RANKS
     }
   };
   const DIVISION_KEYS = Object.keys(DIVISIONS);
@@ -1199,7 +1215,7 @@
      from Supabase; every mutation writes to Supabase first, then calls
      reloadAll() so this tab (and every other open tab, via realtime)
      ends up showing the same data. */
-  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
+  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], highcommand: [], terminated: [] };
   let promotionLog = [];
   let loadError = false;
 
@@ -1290,6 +1306,19 @@
     if(activeTab && activeTab.style.display === 'none'){
       activateSheet('sheet-callsigns');
     }
+
+    // High Command is only visible to, and only promotable into by,
+    // existing High Command members (or DOJ). Hides both its Callsigns
+    // sub-tab/sheet and disables it as a choice in the Promote popover.
+    const hcTab = document.querySelector('#callsigns-tabstrip .unit-tab[data-div="highcommand"]');
+    if(hcTab) hcTab.style.display = p.canViewHighCommand ? '' : 'none';
+    // If High Command was the active Callsigns sub-tab and just got hidden,
+    // fall back to General duties.
+    if(hcTab && hcTab.style.display === 'none' && hcTab.classList.contains('active')){
+      activateCallsignDivision(DIVISION_KEYS[0]);
+    }
+    const hcPromoteOption = promoteDivisionSelect.querySelector('option[value="highcommand"]');
+    if(hcPromoteOption) hcPromoteOption.disabled = !p.canViewHighCommand;
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1318,7 +1347,7 @@
     const { data, error } = await sb.from('officers').select('*');
     if(error){ console.error('Could not load officers', error); loadError = true; return; }
     loadError = false;
-    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
+    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], highcommand: [], terminated: [] };
     (data || []).forEach(row => {
       const key = STORAGE_KEYS.includes(row.list_key) ? row.list_key : 'general';
       out[key].push(rowToEntry(row));
@@ -1916,12 +1945,15 @@
 
   function renderDivision(divKey){
     const div = DIVISIONS[divKey];
-    // Shared executive-rank officers appear on every division tab, on top
-    // of that division's own officers — except AFP, which is federal
-    // liaisons only and shows nothing but entries actually ranked "AFP".
+    // Exec-rank officers now live exclusively under High Command, not
+    // layered onto every other division's tab. AFP shows nothing but
+    // entries actually ranked "AFP"; every other ordinary division shows
+    // only its own officers.
     const entries = divKey === 'afp'
       ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'AFP')
-      : [...(entriesByDivision.shared || []), ...(entriesByDivision[divKey] || [])];
+      : divKey === 'highcommand'
+        ? (entriesByDivision.shared || [])
+        : (entriesByDivision[divKey] || []);
     // The search bar filters every division at once, not just the active
     // tab, so a name search finds matches across all lists.
     const q = document.getElementById('search-box').value.trim().toLowerCase();
@@ -2110,7 +2142,9 @@
     document.getElementById('export-btn-' + key).addEventListener('click', () => {
       const entries = key === 'afp'
         ? (entriesByDivision[key] || []).filter(e => e.rank === 'AFP')
-        : [...(entriesByDivision.shared || []), ...(entriesByDivision[key] || [])];
+        : key === 'highcommand'
+          ? (entriesByDivision.shared || [])
+          : (entriesByDivision[key] || []);
       if(entries.length === 0) return;
       const header = ['Callsign','Rank','Officer name','FTO Status','Discord ID','Inducted date','Promotion officer'];
       const rows = entries.slice().sort((a,b) => (a.time||'').localeCompare(b.time||''))
@@ -2502,7 +2536,7 @@
       renderTerminated();
     });
     termRankFilterPop.appendChild(allBtn);
-    GD_RANKS.forEach(r => {
+    RANKS.forEach(r => {
       const b = document.createElement('button');
       b.textContent = r;
       b.className = terminatedRankFilter === r ? 'sel' : '';
@@ -2614,7 +2648,7 @@
   function renderRankGrid(){
     const body = document.getElementById('rank-body');
     body.innerHTML = '';
-    GD_RANKS.forEach((r, i) => {
+    RANKS.forEach((r, i) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td class="rk-no">${i+1}</td><td>${rankBadgeHtml(r)}</td>`;
       body.appendChild(tr);
