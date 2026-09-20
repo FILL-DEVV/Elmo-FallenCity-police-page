@@ -2372,20 +2372,21 @@
     { rank: "Senior Constable", first: "Jakell", last: "Dumass", callsign: "CIU-701", promo: "Saint Yoza", date: "31/08/26", discord: "1072743291919024219" }
   ];
 
-  // AFP (Australian Federal Police) — federal-government liaisons rather
-  // than regular PD ranks, so every row is logged with the flat "AFP"
-  // rank instead of the usual ladder. The sheet has no induction-date
-  // column, so time is left blank. Two reserved slots (AFP-09, AFP-10)
-  // had no name filled in and were left out, same as other imports.
+  // AFP is Department of Justice under a different display name — federal
+  // liaisons rather than regular PD ranks, so every row is logged with
+  // the flat "AFP" rank instead of the usual ladder. The sheet has no
+  // induction-date column, so time is left blank. Two reserved slots
+  // (AFP-9, AFP-10) had no name filled in and were left out, same as
+  // other imports. Callsigns run AFP-1 through AFP-10.
   const AFP_ROSTER_IMPORT = [
-    { rank: "AFP", first: "TamaTi", last: "Uce", callsign: "AFP-01", promo: "Federal Government", date: "", discord: "525860930874114055" },
-    { rank: "AFP", first: "Kuto", last: "Woo", callsign: "AFP-02", promo: "Federal Government", date: "", discord: "908254639730864159" },
-    { rank: "AFP", first: "Envica", last: "", callsign: "AFP-03", promo: "Federal Government", date: "", discord: "884422557888036917" },
-    { rank: "AFP", first: "Heath", last: "Sharr", callsign: "AFP-04", promo: "Federal Government", date: "", discord: "1177206388188008518" },
-    { rank: "AFP", first: "Lockie", last: "Jiff", callsign: "AFP-05", promo: "Federal Government", date: "", discord: "1531531214006128773" },
-    { rank: "AFP", first: "Nyx", last: "Sinclair", callsign: "AFP-06", promo: "Federal Government", date: "", discord: "1241159504209514569" },
-    { rank: "AFP", first: "Lq", last: "", callsign: "AFP-07", promo: "Federal Government", date: "", discord: "881678557070364713" },
-    { rank: "AFP", first: "Mazie", last: "", callsign: "AFP-08", promo: "Federal Government", date: "", discord: "894206285791256576" }
+    { rank: "AFP", first: "TamaTi", last: "Uce", callsign: "AFP-1", promo: "Federal Government", date: "", discord: "525860930874114055" },
+    { rank: "AFP", first: "Kuto", last: "Woo", callsign: "AFP-2", promo: "Federal Government", date: "", discord: "908254639730864159" },
+    { rank: "AFP", first: "Envica", last: "", callsign: "AFP-3", promo: "Federal Government", date: "", discord: "884422557888036917" },
+    { rank: "AFP", first: "Heath", last: "Sharr", callsign: "AFP-4", promo: "Federal Government", date: "", discord: "1177206388188008518" },
+    { rank: "AFP", first: "Lockie", last: "Jiff", callsign: "AFP-5", promo: "Federal Government", date: "", discord: "1531531214006128773" },
+    { rank: "AFP", first: "Nyx", last: "Sinclair", callsign: "AFP-6", promo: "Federal Government", date: "", discord: "1241159504209514569" },
+    { rank: "AFP", first: "Lq", last: "", callsign: "AFP-7", promo: "Federal Government", date: "", discord: "881678557070364713" },
+    { rank: "AFP", first: "Mazie", last: "", callsign: "AFP-8", promo: "Federal Government", date: "", discord: "894206285791256576" }
   ];
 
   // Converts the sheet's DD/MM/YY or DD/MM/YYYY dates to the app's
