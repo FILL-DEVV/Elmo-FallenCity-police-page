@@ -47,12 +47,40 @@ const SENIOR_TIER_ROLE_IDS = {
 };
 
 // Leadership-role IDs held specifically at the Sergeant rank (one tier
-// below Incremental Sergeant), by division.
+// below Incremental Sergeant), by division. Dead for crime/tou now that
+// their Sergeant-tier rank was renamed (Detective Supervisor / TOU
+// Supervisor) — see RANK_SPECIFIC_ROLE_IDS below, which takes over for
+// those two divisions' full custom ladder — but left as-is since
+// general/highway still use the plain "Sergeant" name.
 const SERGEANT_TIER_ROLE_IDS = {
   general: ['1525134748761063677'],
   tou: ['1470364203503321212', '1525134748761063677'],
   highway: ['1470364089338429450', '1525134748761063677'],
   crime: ['1525134748761063677', '1470364203503321212']
+};
+
+// Explicit role-ID set an officer should hold for each rank of CIU's and
+// TOU's renamed Detective/Operator ladders (Sergeant through Senior
+// Constable renamed, plus a new bottom rank in CIU's case). Keyed by
+// rank name directly, since these ranks don't fit the generic
+// Sergeant/Incremental-Sergeant naming the two maps above were built
+// around. Diffed old-rank-set vs new-rank-set on every promotion, same
+// as the maps above, so a role is added when newly earned and stripped
+// when no longer held — regardless of how many ranks someone jumps.
+const RANK_SPECIFIC_ROLE_IDS = {
+  crime: {
+    'Detective Supervisor': ['1525134667714400276', '1470364244225687767'],
+    'Lead Detective': ['1445629707721642045'],
+    'Senior Detective': ['1545713949373243403'],
+    'Detective': ['1445628002724745296'],
+    'Trial Detective': ['1448247016323944680', '1445628002724745296']
+  },
+  tou: {
+    'TOU Supervisor': ['1470364203503321212', '1525134667714400276'],
+    'Senior Operator': ['1535160869514903574', '1445629707721642045'],
+    'Operator': ['1545713949373243403', '1546481791458869268'],
+    'Trial Operator': ['1470030456790454324', '1445628002724745296']
+  }
 };
 
 function isDiscordId(v) {
@@ -77,12 +105,18 @@ function divisionRoleName(rank, listKey) {
   return HCT_RANKS.has(rank) ? 'High Command Team' : (DIVISION_ROLE_TAG[listKey] || null);
 }
 
-// The leadership-role IDs an officer should hold for a given rank +
-// division — the Sergeant set, the Incremental-Sergeant-and-above set,
-// or none. Used to diff old vs new state so roles get stripped on
-// demotion, not just granted on promotion.
+// The leadership/tier-specific role IDs an officer should hold for a
+// given rank + division. Checks CIU/TOU's explicit per-rank map first,
+// then falls back to the generic Sergeant / Incremental-Sergeant-and-
+// above threshold rule used by general/highway (and by crime/tou's own
+// Inspector, Senior Sergeant and Incremental Sergeant, which weren't
+// renamed and still hit the threshold branch below).
 function milestoneRoleIds(rank, listKey) {
-  if (!rank || !DIVISION_ROLE_TAG[listKey]) return [];
+  if (!rank) return [];
+  if (RANK_SPECIFIC_ROLE_IDS[listKey] && RANK_SPECIFIC_ROLE_IDS[listKey][rank]) {
+    return RANK_SPECIFIC_ROLE_IDS[listKey][rank];
+  }
+  if (!DIVISION_ROLE_TAG[listKey]) return [];
   if (rank === 'Sergeant') return SERGEANT_TIER_ROLE_IDS[listKey] || [];
   if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
     return SENIOR_TIER_ROLE_IDS[listKey] || [];
@@ -161,13 +195,14 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
   });
 }
 
-// Syncs the leadership roles (Sergeant tier / Incremental Sergeant+ tier)
-// by diffing what the officer's OLD rank+division earned against what
-// their NEW rank+division earns: roles only in the old set are stripped
-// (demotion, or moving to a division with a different role list), roles
-// only in the new set are added (promotion into a qualifying rank). A
-// role held under both stays untouched. Pass oldRank/oldListKey as null
-// for a brand-new officer (nothing to strip, just grants what's due).
+// Syncs the leadership roles (Sergeant tier / Incremental Sergeant+ tier,
+// or CIU/TOU's per-rank Detective/Operator sets) by diffing what the
+// officer's OLD rank+division earned against what their NEW rank+division
+// earns: roles only in the old set are stripped (demotion, or moving to a
+// division with a different role list), roles only in the new set are
+// added (promotion into a qualifying rank). A role held under both stays
+// untouched. Pass oldRank/oldListKey as null for a brand-new officer
+// (nothing to strip, just grants what's due).
 async function syncMilestoneRoles({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   if (!isDiscordId(discordUserId)) return;
 
