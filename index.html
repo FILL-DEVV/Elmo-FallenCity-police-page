@@ -1320,8 +1320,6 @@
     }
     const srcmdPromoteOption = promoteDivisionSelect.querySelector('option[value="srcmd"]');
     if(srcmdPromoteOption) srcmdPromoteOption.disabled = !p.canViewHighCommand;
-    const srcmdEntryRow = document.getElementById('entry-row-srcmd');
-    if(srcmdEntryRow) srcmdEntryRow.style.display = (p.canAdd && p.canViewHighCommand) ? '' : 'none';
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1766,9 +1764,10 @@
   // its own list_key never holds anything (exec ranks always route to the
   // shared bucket via listKeyFor), so this is a read-only AGGREGATE view
   // (shared exec bucket + every division's own Inspector/Senior Sergeant
-  // rows) with its own Add-officer row limited to the exec ranks — the
-  // exec-rank equivalent of adding straight into a division, restoring
-  // what a since-removed separate "High Command" division used to do.
+  // rows). It's still a valid Promote-popover target for the exec ranks
+  // (wired below with the rest of the Promote popover), but has no
+  // Add-officer row of its own — exec ranks are added by promoting an
+  // existing officer, or via a real division's own Add-officer row.
   const srcmdSheet = document.createElement('div');
   srcmdSheet.className = 'sheet';
   srcmdSheet.id = 'sheet-srcmd';
@@ -1779,40 +1778,7 @@
       <div class="spacer"></div>
       <button class="btn" id="export-btn-srcmd" type="button">Export .csv</button>
     </div>
-    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. Adding an officer here logs them straight at an exec rank (Police liaison through Chief Inspector); Inspector and Senior Sergeant are added from their real division tab instead.</div>
-
-    <div class="quickadd" id="entry-row-srcmd">
-      <div class="quickadd-title">+ New Officer Entry</div>
-      <div class="quickadd-fields">
-        <div class="qcell">
-          <label>Callsign</label>
-          <input id="f-callsign-srcmd" placeholder="PL-100" autocomplete="off">
-        </div>
-        <div class="qcell">
-          <label>Rank</label>
-          <select id="f-rank-srcmd"></select>
-        </div>
-        <div class="qcell">
-          <label>Officer name</label>
-          <input id="f-unit-srcmd" placeholder="J. Smith" autocomplete="off">
-        </div>
-        <div class="qcell">
-          <label>Discord ID</label>
-          <input id="f-discord-srcmd" placeholder="username" autocomplete="off">
-        </div>
-        <div class="qcell">
-          <label>Inducted date</label>
-          <input id="f-time-srcmd" type="date">
-        </div>
-        <div class="qcell">
-          <label>Promotion officer</label>
-          <input id="f-promo-srcmd" placeholder="J. Doe" autocomplete="off">
-        </div>
-      </div>
-      <div class="quickadd-add-row">
-        <button class="btn primary" id="add-btn-srcmd" type="button">Add officer</button>
-      </div>
-    </div>
+    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. This is a read-only aggregate view; use the Promote button on a row, or a division's own Add-officer row, to bring someone in.</div>
 
     <div class="grid-scroll"><table class="grid">
       <thead>
@@ -1927,27 +1893,6 @@
     document.querySelectorAll('#callsigns-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === divKey));
     document.querySelectorAll('#callsigns-divisions-container .sheet').forEach(s => s.classList.toggle('active', s.id === 'sheet-' + divKey));
     activeCallsignDiv = divKey;
-  }
-
-  // Rank <select> options, Add-officer wiring, and callsign prefill for
-  // Senior command's own quickadd row — kept separate from the
-  // "Wire up each division" DIVISION_KEYS.forEach loop below since
-  // 'srcmd' isn't a real division.
-  {
-    const srcmdRankSelect = document.getElementById('f-rank-srcmd');
-    EXEC_RANKS.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r; opt.textContent = r;
-      srcmdRankSelect.appendChild(opt);
-    });
-    srcmdRankSelect.addEventListener('change', () => {
-      const suggestion = nextCallsignForRank('srcmd', srcmdRankSelect.value);
-      if(suggestion) document.getElementById('f-callsign-srcmd').value = suggestion;
-    });
-    document.getElementById('add-btn-srcmd').addEventListener('click', () => addEntry('srcmd'));
-    document.getElementById('entry-row-srcmd').addEventListener('keydown', (ev) => {
-      if(ev.key === 'Enter'){ ev.preventDefault(); addEntry('srcmd'); }
-    });
   }
 
   // Academy sub-tabs — currently just FTO LIST, structured so more can be
