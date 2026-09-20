@@ -1153,7 +1153,7 @@
      from Supabase; every mutation writes to Supabase first, then calls
      reloadAll() so this tab (and every other open tab, via realtime)
      ends up showing the same data. */
-  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], terminated: [] };
+  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
   let promotionLog = [];
   let loadError = false;
 
@@ -1272,7 +1272,7 @@
     const { data, error } = await sb.from('officers').select('*');
     if(error){ console.error('Could not load officers', error); loadError = true; return; }
     loadError = false;
-    const out = { shared: [], general: [], highway: [], tou: [], crime: [], terminated: [] };
+    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
     (data || []).forEach(row => {
       const key = STORAGE_KEYS.includes(row.list_key) ? row.list_key : 'general';
       out[key].push(rowToEntry(row));
