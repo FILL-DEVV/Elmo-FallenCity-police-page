@@ -83,6 +83,16 @@ const RANK_SPECIFIC_ROLE_IDS = {
   }
 };
 
+// A single blanket role held at ANY rank within that division — layered
+// on top of whatever rank-specific roles apply, and (like everything
+// else here) diffed automatically: it's added the moment someone is
+// promoted into that division and stripped the moment they leave it,
+// regardless of which specific rank they hold there.
+const DIVISION_WIDE_ROLE_IDS = {
+  crime: ['1525135433770729625'],
+  tou: ['1525135421271441458']
+};
+
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
 }
@@ -110,18 +120,21 @@ function divisionRoleName(rank, listKey) {
 // then falls back to the generic Sergeant / Incremental-Sergeant-and-
 // above threshold rule used by general/highway (and by crime/tou's own
 // Inspector, Senior Sergeant and Incremental Sergeant, which weren't
-// renamed and still hit the threshold branch below).
+// renamed and still hit the threshold branch below). Every crime/tou
+// rank also picks up that division's blanket role on top.
 function milestoneRoleIds(rank, listKey) {
   if (!rank) return [];
+  let ids = [];
   if (RANK_SPECIFIC_ROLE_IDS[listKey] && RANK_SPECIFIC_ROLE_IDS[listKey][rank]) {
-    return RANK_SPECIFIC_ROLE_IDS[listKey][rank];
+    ids = RANK_SPECIFIC_ROLE_IDS[listKey][rank];
+  } else if (DIVISION_ROLE_TAG[listKey]) {
+    if (rank === 'Sergeant') ids = SERGEANT_TIER_ROLE_IDS[listKey] || [];
+    else if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
+      ids = SENIOR_TIER_ROLE_IDS[listKey] || [];
+    }
   }
-  if (!DIVISION_ROLE_TAG[listKey]) return [];
-  if (rank === 'Sergeant') return SERGEANT_TIER_ROLE_IDS[listKey] || [];
-  if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
-    return SENIOR_TIER_ROLE_IDS[listKey] || [];
-  }
-  return [];
+  if (DIVISION_WIDE_ROLE_IDS[listKey]) ids = ids.concat(DIVISION_WIDE_ROLE_IDS[listKey]);
+  return ids;
 }
 
 // Removes a member's old named role (if any) and adds a new named role (if
@@ -196,13 +209,14 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
 }
 
 // Syncs the leadership roles (Sergeant tier / Incremental Sergeant+ tier,
-// or CIU/TOU's per-rank Detective/Operator sets) by diffing what the
-// officer's OLD rank+division earned against what their NEW rank+division
-// earns: roles only in the old set are stripped (demotion, or moving to a
-// division with a different role list), roles only in the new set are
-// added (promotion into a qualifying rank). A role held under both stays
-// untouched. Pass oldRank/oldListKey as null for a brand-new officer
-// (nothing to strip, just grants what's due).
+// or CIU/TOU's per-rank Detective/Operator sets, plus each division's
+// blanket role) by diffing what the officer's OLD rank+division earned
+// against what their NEW rank+division earns: roles only in the old set
+// are stripped (demotion, or moving to a division with a different role
+// list), roles only in the new set are added (promotion into a
+// qualifying rank). A role held under both stays untouched. Pass
+// oldRank/oldListKey as null for a brand-new officer (nothing to strip,
+// just grants what's due).
 async function syncMilestoneRoles({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   if (!isDiscordId(discordUserId)) return;
 
