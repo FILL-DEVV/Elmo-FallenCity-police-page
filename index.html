@@ -1022,11 +1022,38 @@
   // same shared ladder — GD_RANKS is just an alias kept because the rest of
   // the app still refers to it by that name.
   const GD_RANKS = RANKS;
+  // CIU and TOU replace the Sergeant-through-Senior-Constable slice of the
+  // standard ladder with their own named ranks (Detective / Operator
+  // tracks) — everything from Inspector up through Incremental Sergeant
+  // stays the shared ladder, taken as a slice of RANKS.
+  const SHARED_LADDER_PREFIX = RANKS.slice(0, RANKS.indexOf("Incremental Sergeant") + 1);
+  const CIU_RANKS = [
+    ...SHARED_LADDER_PREFIX,
+    "Detective Supervisor","Lead Detective","Senior Detective","Detective","Trial Detective"
+  ];
+  const TOU_RANKS = [
+    ...SHARED_LADDER_PREFIX,
+    "TOU Supervisor","Senior Operator","Operator","Trial Operator"
+  ];
   // Position of each rank in the hierarchy, most senior first — used to
   // keep each division's log sorted top-to-bottom by seniority at all
-  // times. Built from GD_RANKS since it's a superset of every division's
-  // rank list.
-  const RANK_ORDER = Object.fromEntries(GD_RANKS.map((r, i) => [r, i]));
+  // times. Includes every division's rank names (standard ladder plus
+  // CIU's and TOU's renamed ranks) so sorting works regardless of which
+  // division a row belongs to; a division's render only ever mixes its
+  // own rank names with the shared exec ranks, so two divisions' custom
+  // names never actually need to be compared against each other — only
+  // their relative seniority level (matched to the tier they replaced)
+  // matters here.
+  const RANK_ORDER_LIST = [
+    ...SHARED_LADDER_PREFIX,
+    "Sergeant","Detective Supervisor","TOU Supervisor",
+    "Leading Senior Constable","Lead Detective","Senior Operator",
+    "Incremental Senior Constable","Senior Detective","Operator",
+    "Senior Constable","Detective","Trial Operator",
+    "Constable","Trial Detective",
+    "Probationary Constable","student","AFP"
+  ];
+  const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [r, i]));
 
   // Which color tier a rank's badge gets in the Nightwatch UI.
   const RANK_TIER_WHITE = new Set(['Commissioner','Deputy Commissioner','Assistant Commissioner']);
@@ -1035,9 +1062,11 @@
   // Senior Sergeant gets its own distinct blue, separate from the
   // Incremental Sergeant / Sergeant blue below.
   const RANK_TIER_SERGEANT_SENIOR = new Set(['Senior Sergeant']);
-  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','Sergeant']);
+  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','Sergeant','Detective Supervisor','TOU Supervisor']);
   const RANK_TIER_CONSTABLE = new Set([
-    'Leading Senior Constable','Incremental Senior Constable','Senior Constable'
+    'Leading Senior Constable','Incremental Senior Constable','Senior Constable',
+    'Lead Detective','Senior Detective','Detective',
+    'Senior Operator','Operator','Trial Operator'
   ]);
   // Police liaison is the only rank left in the amber "exec" tier now that
   // Commissioner/Deputy/Assistant Commissioner (white) and Chief
@@ -1095,14 +1124,31 @@
       leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
       constable: 600
     }),
-    tou: divisionCodes("TOU", {
-      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
-      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500
-    }),
-    crime: divisionCodes("CIU", {
-      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
-      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500
-    }),
+    tou: {
+      ...EXEC_CODES,
+      "Inspector": { prefix: "TOU", base: 100 },
+      "Senior Sergeant": { prefix: "TOU", base: 200 },
+      "Incremental Sergeant": { prefix: "TOU", base: 300 },
+      "TOU Supervisor": { prefix: "TOU", base: 301 },
+      "Senior Operator": { prefix: "TOU", base: 500 },
+      "Operator": { prefix: "TOU", base: 600 },
+      "Trial Operator": { prefix: "TOU", base: 700 }
+    },
+    // CIU and TOU use their own named ranks below Incremental Sergeant
+    // (Detective / Operator tracks) instead of the shared ladder, so
+    // their code tables are written out directly rather than through
+    // divisionCodes(), which assumes the standard rank names as keys.
+    crime: {
+      ...EXEC_CODES,
+      "Inspector": { prefix: "CIU", base: 100 },
+      "Senior Sergeant": { prefix: "CIU", base: 200 },
+      "Incremental Sergeant": { prefix: "CIU", base: 300 },
+      "Detective Supervisor": { prefix: "CIU", base: 301 },
+      "Lead Detective": { prefix: "CIU", base: 400 },
+      "Senior Detective": { prefix: "CIU", base: 500 },
+      "Detective": { prefix: "CIU", base: 600 },
+      "Trial Detective": { prefix: "CIU", base: 700 }
+    },
     afp: divisionCodes("AFP", {
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
       leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
@@ -1125,13 +1171,13 @@
     },
     tou: {
       label: "Tactical Operations Unit",
-      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the shared executive ranks, then its own TOU callsign blocks from Inspector down to Senior Constable. Constable, Probationary Constable and Student aren't coded for this division yet.",
-      ranks: RANKS
+      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the shared executive ranks through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Senior Operator, Operator, Trial Operator.",
+      ranks: TOU_RANKS
     },
     crime: {
       label: "Criminal Investigations Unit",
-      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the shared executive ranks, then its own CIU callsign blocks from Inspector down to Senior Constable. Constable, Probationary Constable and Student aren't coded for this division yet.",
-      ranks: RANKS
+      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the shared executive ranks through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective.",
+      ranks: CIU_RANKS
     },
     afp: {
       label: "AFP",
