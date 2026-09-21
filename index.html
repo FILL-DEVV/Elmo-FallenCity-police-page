@@ -1293,11 +1293,6 @@
       const row = document.getElementById('entry-row-' + key);
       if(row) row.style.display = p.canAdd ? '' : 'none';
     });
-    // Temporary scoped one-off import button for backfilling Department
-    // Of Justice from the Google Sheet — remove this along with the
-    // button/array/wiring once the import has been run.
-    const dojImportBtn = document.getElementById('import-roster-btn-afp');
-    if(dojImportBtn) dojImportBtn.style.display = p.canImportRoster ? '' : 'none';
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
@@ -1820,7 +1815,6 @@
         <span class="pill" id="entry-count-label-${key}">0 rows</span>
         <span class="pill" id="filtered-count-pill-${key}"></span>
         <div class="spacer"></div>
-        ${key === 'afp' ? `<button class="btn" id="import-roster-btn-afp" type="button">Import DOJ roster</button>` : ''}
         <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
       </div>
 
@@ -2353,56 +2347,6 @@
     // Pre-fill the first suggested callsign for this division's default rank.
     document.getElementById('f-callsign-' + key).value = nextCallsignForRank(key, rankSelect.value);
   });
-
-  // ---------- TEMPORARY: one-off Department Of Justice backfill ----------
-  // Sourced from the "Fallen City PD Roster" Google Sheet's AFP tab.
-  // Rows with no name filled in (AFP-09, AFP-10) are reserved slots, not
-  // real officers, and are left out. "notes" carries the sheet's "Federal
-  // Government Name" column, which doesn't map to any other field.
-  // Remove this array, the button in the per-division template above, its
-  // gating in applyPermissionGating, and the wireDojImport() call below
-  // once this one-time import has been run.
-  const DOJ_ROSTER_IMPORT = [
-    { first: "TamaTi", last: "Uce", callsign: "AFP-01", discord: "525860930874114055", notes: "Jonathan - Fallen City Owner" },
-    { first: "Kuto", last: "Woo", callsign: "AFP-02", discord: "908254639730864159", notes: "Kuto - Senior Admin" },
-    { first: "Envica", last: "", callsign: "AFP-03", discord: "884422557888036917", notes: "Envica - Senior Admin" },
-    { first: "Heath", last: "Sharr", callsign: "AFP-04", discord: "1177206388188008518", notes: "Heath - Senior Admin" },
-    { first: "Lockie", last: "Jiff", callsign: "AFP-05", discord: "1531531214006128773", notes: "Niko - Admin" },
-    { first: "Nyx", last: "Sinclair", callsign: "AFP-06", discord: "1241159504209514569", notes: "Nyx - Admin" },
-    { first: "Lq", last: "", callsign: "AFP-07", discord: "881678557070364713", notes: "Lq - Admin" },
-    { first: "Mazie", last: "", callsign: "AFP-08", discord: "894206285791256576", notes: "Mazie - Admin" }
-  ];
-  function wireDojImport(){
-    const btn = document.getElementById('import-roster-btn-afp');
-    if(!btn) return;
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      btn.textContent = 'Importing…';
-      let count = 0;
-      for(const item of DOJ_ROSTER_IMPORT){
-        const entry = {
-          id: 'e' + Date.now() + Math.random().toString(36).slice(2,7),
-          callsign: item.callsign,
-          rank: 'Department Of Justice',
-          unit: item.first + (item.last ? ' ' + item.last : ''),
-          discord: item.discord || '',
-          promo: 'Federal Government',
-          time: '',
-          fto: '',
-          notes: item.notes || '',
-          checklist: {},
-          created: Date.now()
-        };
-        try{
-          await apiPost('/api/officers/add', { ...entry, list_key: 'afp', divisionLabel: 'Department Of Justice' });
-          count++;
-        }catch(e){ console.error('DOJ import row failed', item, e); }
-      }
-      await reloadAll();
-      btn.textContent = 'Imported ' + count + ' officers';
-    });
-  }
-  wireDojImport();
 
   document.addEventListener('click', () => {
     document.querySelectorAll('.filter-pop.open').forEach(p => p.classList.remove('open'));
