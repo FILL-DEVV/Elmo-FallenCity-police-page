@@ -11,8 +11,9 @@ const TIER3_ROLES = ['senior fto', 'fto supervisor', 'fto director', 'head of ac
 // High Command Team / Commissioned Office — unlocks the Senior Command tab.
 const HIGH_COMMAND_ROLES = ['high command team', 'commissioned office'];
 // Department of Justice — full access to every tab and every action,
-// overriding all other tiers. AFP gets the same full access.
-const DOJ_ROLES = ['department of justice', 'afp'];
+// overriding all other tiers. (Formerly named "AFP" on the server and
+// in this list; renamed here to match the server-side role rename.)
+const DOJ_ROLES = ['department of justice'];
 // Superintendent and above — a narrower slice of TIER1_ROLES (excludes
 // Chief Inspector, Inspector, Senior Sergeant) — can edit an existing
 // officer's name and Discord ID directly on the roster.
@@ -33,7 +34,7 @@ function computePermissions(roleNames) {
   const tier2 = has(TIER2_ROLES);       // FTO
   const tier3 = has(TIER3_ROLES);       // Senior FTO and above
   const highCommand = has(HIGH_COMMAND_ROLES); // High Command Team / Commissioned Office
-  const isDOJ = has(DOJ_ROLES);         // Department of Justice / AFP — sees/does everything
+  const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
   const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
   const incrementalSgt = has(INCREMENTAL_SERGEANT_ROLES); // Incremental Sergeant
 
