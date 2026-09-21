@@ -1064,7 +1064,7 @@
     "Incremental Senior Constable","Senior Detective","Operator",
     "Senior Constable","Detective","Trial Operator",
     "Constable","Trial Detective",
-    "Probationary Constable","student","AFP"
+    "Probationary Constable","student","Department Of Justice"
   ];
   const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [r, i]));
 
@@ -1197,9 +1197,9 @@
       ranks: CIU_RANKS
     },
     afp: {
-      label: "AFP",
-      note: "AFP uses its own AFP callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"AFP\" rank rather than the PD ladder.",
-      ranks: ["AFP", ...GD_RANKS]
+      label: "Department Of Justice",
+      note: "Department Of Justice (DOJ) uses its own AFP-prefixed callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"Department Of Justice\" rank rather than the PD ladder.",
+      ranks: ["Department Of Justice", ...GD_RANKS]
     }
   };
   const DIVISION_KEYS = Object.keys(DIVISIONS);
@@ -1991,11 +1991,11 @@
   function renderDivision(divKey){
     const div = DIVISIONS[divKey];
     // Exec-rank officers live under Senior command's aggregate view, not
-    // layered onto every other division's tab. AFP shows nothing but
-    // entries actually ranked "AFP"; every other ordinary division shows
-    // only its own officers.
+    // layered onto every other division's tab. Department Of Justice shows
+    // nothing but entries actually ranked "Department Of Justice"; every
+    // other ordinary division shows only its own officers.
     const entries = divKey === 'afp'
-      ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'AFP')
+      ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'Department Of Justice')
       : (entriesByDivision[divKey] || []);
     // The search bar filters every division at once, not just the active
     // tab, so a name search finds matches across all lists.
@@ -2329,7 +2329,7 @@
 
     document.getElementById('export-btn-' + key).addEventListener('click', () => {
       const entries = key === 'afp'
-        ? (entriesByDivision[key] || []).filter(e => e.rank === 'AFP')
+        ? (entriesByDivision[key] || []).filter(e => e.rank === 'Department Of Justice')
         : (entriesByDivision[key] || []);
       if(entries.length === 0) return;
       const header = ['Callsign','Rank','Officer name','FTO Status','Discord ID','Inducted date','Promotion officer'];
