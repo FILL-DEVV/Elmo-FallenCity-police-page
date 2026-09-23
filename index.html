@@ -1303,6 +1303,10 @@
     // api/officers/migrate-structure.js once the backfill has been run.
     const migrateBtn = document.getElementById('migrate-structure-btn');
     if(migrateBtn) migrateBtn.style.display = p.canImportRoster ? '' : 'none';
+    // Temporary one-off duplicate-callsign cleanup button — remove along
+    // with api/officers/fix-duplicate-callsigns.js once this has been run.
+    const fixDupesBtn = document.getElementById('fix-duplicate-callsigns-btn');
+    if(fixDupesBtn) fixDupesBtn.style.display = p.canImportRoster ? '' : 'none';
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
@@ -1433,13 +1437,29 @@
     return null;
   }
 
+  // Ranks with no callsign code of their own (Operator, Detective) inherit
+  // whichever callsign an officer already carries from the rank they were
+  // promoted from (TOU trial, Trial Detective) — that's intentional, so
+  // the promotion doesn't change their callsign. But it means a NEW
+  // officer being assigned a fresh callsign at the SOURCE rank must also
+  // avoid numbers already claimed by anyone who's since been promoted
+  // forward into the inheriting rank; otherwise two people can end up
+  // sharing the same callsign. This maps each source rank to the rank(s)
+  // that silently inherit its callsign block.
+  const CALLSIGN_INHERITORS = {
+    tou: { 'TOU trial': ['Operator'] },
+    crime: { 'Trial Detective': ['Detective'] }
+  };
+
   function nextCallsignForRank(divKey, rank){
     const codes = DIVISION_RANK_CODES[divKey];
     const code = codes ? codes[rank] : null;
     if(!code) return '';
     const listKey = listKeyFor(divKey, rank);
     const list = entriesByDivision[listKey] || [];
-    const used = new Set(list.filter(e => e.rank === rank).map(e => e.callsign));
+    const inheritors = (CALLSIGN_INHERITORS[divKey] && CALLSIGN_INHERITORS[divKey][rank]) || [];
+    const familyRanks = new Set([rank, ...inheritors]);
+    const used = new Set(list.filter(e => familyRanks.has(e.rank)).map(e => e.callsign));
     let n = code.base;
     while(used.has(code.prefix + '-' + n)) n++;
     return code.prefix + '-' + n;
@@ -1825,7 +1845,7 @@
         <span class="pill" id="entry-count-label-${key}">0 rows</span>
         <span class="pill" id="filtered-count-pill-${key}"></span>
         <div class="spacer"></div>
-        ${key === 'general' ? `<button class="btn" id="migrate-structure-btn" type="button">Migrate structure</button>` : ''}
+        ${key === 'general' ? `<button class="btn" id="migrate-structure-btn" type="button">Migrate structure</button><button class="btn" id="fix-duplicate-callsigns-btn" type="button">Fix duplicate callsigns</button>` : ''}
         <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
       </div>
 
@@ -2385,6 +2405,35 @@
     });
   }
   wireMigrateStructure();
+
+  // ---------- TEMPORARY: one-off duplicate-callsign cleanup button ----------
+  // Finds every callsign currently held by more than one officer (caused
+  // by the Operator/Detective callsign-inheritance bug, now fixed in
+  // nextCallsignForRank) and reassigns the extras to genuinely free
+  // numbers. Remove this block, the button in the per-division template
+  // above, its gating in applyPermissionGating, and
+  // api/officers/fix-duplicate-callsigns.js once this has been run.
+  function wireFixDuplicateCallsigns(){
+    const btn = document.getElementById('fix-duplicate-callsigns-btn');
+    if(!btn) return;
+    btn.addEventListener('click', async () => {
+      showConfirm('Find and fix duplicate callsigns? The earliest-created officer in each duplicate group keeps their callsign; everyone else sharing it gets reassigned to a free number.', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Checking…';
+        try{
+          const result = await apiPost('/api/officers/fix-duplicate-callsigns', {});
+          btn.textContent = `Done: ${result.duplicateGroups} duplicate group(s), ${result.reassigned} reassigned` + (result.errors && result.errors.length ? ` (${result.errors.length} errors — see console)` : '');
+          if(result.details && result.details.length) console.log('Callsigns reassigned:', result.details);
+          if(result.errors && result.errors.length) console.error('Fix errors:', result.errors);
+          await reloadAll();
+        }catch(e){
+          btn.textContent = 'Fix failed — see console';
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+  wireFixDuplicateCallsigns();
 
   document.addEventListener('click', () => {
     document.querySelectorAll('.filter-pop.open').forEach(p => p.classList.remove('open'));
