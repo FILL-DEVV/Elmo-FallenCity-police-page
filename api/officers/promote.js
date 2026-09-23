@@ -16,24 +16,35 @@ module.exports = async (req, res) => {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Not logged in' });
 
-  const { id, currentRank, listKey, callsign, rank, time, logEntry, toDivisionLabel } = req.body || {};
+  const { id, listKey, callsign, rank, time, logEntry, toDivisionLabel } = req.body || {};
   if (!id || !listKey || !rank) return res.status(400).json({ error: 'Missing required fields' });
 
-  // Senior Sergeant+ can promote anyone. Senior FTO+ can only promote
-  // an officer whose CURRENT rank is student.
-  const isStudentPromotion = currentRank === 'student';
-  const allowed = session.perms.canPromoteAny || (isStudentPromotion && session.perms.canPromoteStudent);
-  if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
-
   try {
-    // Read the officer's CURRENT record before overwriting it — the
-    // announcement and role sync below need the old callsign, rank,
-    // division and Discord ID, taken from the database rather than
-    // trusted from the browser.
+    // Read the officer's CURRENT record before authorizing or overwriting
+    // it — both the permission check below and the announcement/role
+    // sync further down need the real current rank, callsign, division
+    // and Discord ID, taken from the database rather than trusted from
+    // the browser.
     const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord,rank,list_key`, {
       extraHeaders: { Prefer: 'return=representation' }
     });
     const beforeRow = (before && before[0]) || {};
+
+    // Senior Sergeant+ (canPromoteAny) can promote anyone, anywhere.
+    // Senior FTO+ (canPromoteStudent) without that broader access can
+    // only ever advance an officer whose CURRENT rank is student — and
+    // only straight to Probationary Constable in their existing
+    // division, never to any other rank or division. Both checks read
+    // the officer's real current rank/division from the database, not
+    // from the client, so this can't be bypassed by lying in the request.
+    const isStudentPromotion = beforeRow.rank === 'student';
+    const allowed = session.perms.canPromoteAny || (isStudentPromotion && session.perms.canPromoteStudent);
+    if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
+    if (!session.perms.canPromoteAny) {
+      if (rank !== 'Probationary Constable' || listKey !== beforeRow.list_key) {
+        return res.status(403).json({ error: 'You may only promote students to Probationary Constable in their current division' });
+      }
+    }
 
     // promo (the roster's "Promotion officer" column) is stamped from the
     // verified session too, same as promoted_by on the log entry below —
