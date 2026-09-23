@@ -1019,7 +1019,7 @@
   // division's dropdown offers now; the exec ranks live exclusively
   // under the High Command division below.
   const NON_EXEC_RANKS = [
-    "Inspector","Senior Sergeant","Incremental Sergeant","Sergeant",
+    "Inspector","Senior Sergeant","Incremental Sergeant","GD supervisor",
     "Leading Senior Constable","Incremental Senior Constable","Senior Constable",
     "Constable","Probationary Constable","student"
   ];
@@ -1059,7 +1059,7 @@
   const RANK_ORDER_LIST = [
     ...EXEC_RANKS,
     ...SHARED_LADDER_PREFIX,
-    "Sergeant","Detective Supervisor","TOU Supervisor",
+    "GD supervisor","Detective Supervisor","TOU Supervisor",
     "Leading Senior Constable","Lead Detective","Lead Operator",
     "Incremental Senior Constable","Senior Detective","Senior Operator",
     "Senior Constable","Detective","Operator",
@@ -1075,7 +1075,7 @@
   // Senior Sergeant gets its own distinct blue, separate from the
   // Incremental Sergeant / Sergeant blue below.
   const RANK_TIER_SERGEANT_SENIOR = new Set(['Senior Sergeant']);
-  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','Sergeant','Detective Supervisor','TOU Supervisor']);
+  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','GD supervisor','Detective Supervisor','TOU Supervisor']);
   const RANK_TIER_CONSTABLE = new Set([
     'Leading Senior Constable','Incremental Senior Constable','Senior Constable',
     'Lead Detective','Senior Detective','Detective',
@@ -1117,7 +1117,7 @@
       "Inspector": { prefix, base: opts.inspector },
       "Senior Sergeant": { prefix, base: opts.seniorSergeant },
       "Incremental Sergeant": { prefix, base: opts.incrementalSergeant },
-      "Sergeant": { prefix, base: opts.sergeant },
+      "GD supervisor": { prefix, base: opts.sergeant },
       "Leading Senior Constable": { prefix, base: opts.leadingSeniorConstable },
       "Incremental Senior Constable": { prefix, base: opts.incrementalSeniorConstable },
       "Senior Constable": { prefix, base: opts.seniorConstable },
@@ -1129,12 +1129,12 @@
   const DIVISION_RANK_CODES = {
     general: divisionCodes("GD", {
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
-      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
       constable: 600, probationaryConstable: 700, student: 800
     }),
     highway: divisionCodes("TRF", {
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
-      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
       constable: 600
     }),
     tou: {
@@ -1162,8 +1162,11 @@
       "Detective Supervisor": { prefix: "CIU", base: 301 },
       "Lead Detective": { prefix: "CIU", base: 400 },
       "Senior Detective": { prefix: "CIU", base: 500 },
-      "Detective": { prefix: "CIU", base: 600 },
-      "Trial Detective": { prefix: "CIU", base: 700 }
+      // "Detective" has no callsign code of its own on purpose — promoting
+      // from Trial Detective to Detective is a role-only change, so the
+      // officer keeps whatever callsign they already carry from Trial
+      // Detective.
+      "Trial Detective": { prefix: "CIU", base: 550 }
     },
     afp: divisionCodes("AFP", {
       inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
@@ -1181,12 +1184,12 @@
   const DIVISIONS = {
     general: {
       label: "General duties",
-      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) are promoted via Senior command.",
+      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with the Sergeant tier renamed to GD supervisor, and its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) are promoted via Senior command.",
       ranks: GD_RANKS
     },
     highway: {
       label: "Highway patrol",
-      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
+      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder, with the Sergeant tier renamed to GD supervisor, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
       ranks: GD_RANKS
     },
     tou: {
@@ -1196,7 +1199,7 @@
     },
     crime: {
       label: "Criminal Investigations Unit",
-      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the standard ladder through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective.",
+      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the standard ladder through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective. Detective has no callsign code of its own — promoting from Trial Detective keeps the same callsign and only changes Discord roles.",
       ranks: CIU_RANKS
     },
     afp: {
