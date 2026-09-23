@@ -55,6 +55,17 @@ function finalRankOf(o) {
   return (renameMap && renameMap[o.rank]) || o.rank;
 }
 
+// Ranks with no callsign code of their own inherit whichever callsign
+// they already carry from the rank they were promoted from — Operator
+// from TOU trial, Detective from Trial Detective. A collision-avoidance
+// set for "TOU trial" must therefore also account for anyone already
+// promoted forward into "Operator" (same for crime), since they still
+// occupy that callsign even though their current rank has moved on.
+const CALLSIGN_INHERITORS = {
+  tou: { 'TOU trial': ['Operator'] },
+  crime: { 'Trial Detective': ['Detective'] }
+};
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const session = getSession(req);
@@ -80,8 +91,10 @@ module.exports = async (req, res) => {
       if (spec && !inRange(callsign, spec.prefix, spec.base)) {
         const key = o.list_key + '|' + rank;
         if (!usedCallsigns[key]) {
+          const inheritors = (CALLSIGN_INHERITORS[o.list_key] && CALLSIGN_INHERITORS[o.list_key][rank]) || [];
+          const familyRanks = new Set([rank, ...inheritors]);
           usedCallsigns[key] = new Set(
-            officers.filter(x => x.list_key === o.list_key && finalRankOf(x) === rank).map(x => x.callsign)
+            officers.filter(x => x.list_key === o.list_key && familyRanks.has(finalRankOf(x))).map(x => x.callsign)
           );
         }
         const used = usedCallsigns[key];
