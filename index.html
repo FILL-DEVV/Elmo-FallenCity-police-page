@@ -1531,6 +1531,45 @@
     }, { withReason: true, requireReason: true });
   }
 
+  // Senior FTO and above (canPromoteStudent) who don't also hold full
+  // promote access (canPromoteAny) can only ever advance a student
+  // straight to Probationary Constable in their existing division — no
+  // popover, no rank/division choice. The server enforces this same
+  // restriction independently, so this is purely the matching UI: one
+  // confirm, one outcome.
+  function promoteStudentToProbationary(divKey, id){
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    if(entry.rank !== 'student') return;
+    showConfirm('Promote ' + (entry.unit || entry.callsign) + ' to Probationary Constable?', async () => {
+      const newRank = 'Probationary Constable';
+      const newListKey = found.listKey;
+      const suggestion = nextCallsignForRank(divKey, newRank);
+      const newCallsign = suggestion || entry.callsign;
+      await apiPost('/api/officers/promote', {
+        id: entry.id,
+        listKey: newListKey,
+        callsign: newCallsign,
+        rank: newRank,
+        time: entry.time,
+        toDivisionLabel: announceDivisionLabel(newRank, newListKey),
+        logEntry: {
+          id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
+          name: entry.unit || entry.callsign,
+          callsign: newCallsign,
+          from_rank: entry.rank,
+          from_division: divisionLabelFor(found.listKey),
+          to_rank: newRank,
+          to_division: divisionLabelFor(newListKey),
+          date: todayStr(),
+          created: Date.now()
+        }
+      });
+      await reloadAll();
+    });
+  }
+
   /* ---------- FTO status popover ---------- */
   const FTO_RANKS = ["Head Of Academy", "FTO Director", "FTO supervisor", "Senior FTO", "FTO"];
   const ftoPopEl = document.getElementById('fto-pop');
@@ -1757,7 +1796,14 @@
     }
     const btn = ev.target.closest('button.row-promote');
     if(!btn) return;
-    openPromotePop(btn, btn.getAttribute('data-div'), btn.getAttribute('data-id'), 'Promote / transfer');
+    const divKey = btn.getAttribute('data-div');
+    const id = btn.getAttribute('data-id');
+    const p = currentUser.perms || {};
+    if(p.canPromoteAny){
+      openPromotePop(btn, divKey, id, 'Promote / transfer');
+    } else if(p.canPromoteStudent){
+      promoteStudentToProbationary(divKey, id);
+    }
   });
 
   function fmtTime(iso){
