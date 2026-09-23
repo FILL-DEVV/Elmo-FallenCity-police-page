@@ -1045,7 +1045,7 @@
   ];
   const TOU_RANKS = [
     ...SHARED_LADDER_PREFIX,
-    "TOU Supervisor","Senior Operator","Operator","Trial Operator"
+    "TOU Supervisor","Lead Operator","Senior Operator","Operator","TOU trial"
   ];
   // Position of each rank in the hierarchy, most senior first — used to
   // keep each division's log sorted top-to-bottom by seniority at all
@@ -1060,10 +1060,10 @@
     ...EXEC_RANKS,
     ...SHARED_LADDER_PREFIX,
     "Sergeant","Detective Supervisor","TOU Supervisor",
-    "Leading Senior Constable","Lead Detective","Senior Operator",
-    "Incremental Senior Constable","Senior Detective","Operator",
-    "Senior Constable","Detective","Trial Operator",
-    "Constable","Trial Detective",
+    "Leading Senior Constable","Lead Detective","Lead Operator",
+    "Incremental Senior Constable","Senior Detective","Senior Operator",
+    "Senior Constable","Detective","Operator",
+    "Constable","Trial Detective","TOU trial",
     "Probationary Constable","student","Department Of Justice"
   ];
   const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [r, i]));
@@ -1079,7 +1079,7 @@
   const RANK_TIER_CONSTABLE = new Set([
     'Leading Senior Constable','Incremental Senior Constable','Senior Constable',
     'Lead Detective','Senior Detective','Detective',
-    'Senior Operator','Operator','Trial Operator'
+    'Lead Operator','Senior Operator','Operator','TOU trial'
   ]);
   // Police liaison is the only rank left in the amber "exec" tier now that
   // Commissioner/Deputy/Assistant Commissioner (white) and Chief
@@ -1143,9 +1143,12 @@
       "Senior Sergeant": { prefix: "TOU", base: 200 },
       "Incremental Sergeant": { prefix: "TOU", base: 300 },
       "TOU Supervisor": { prefix: "TOU", base: 301 },
+      "Lead Operator": { prefix: "TOU", base: 400 },
       "Senior Operator": { prefix: "TOU", base: 500 },
-      "Operator": { prefix: "TOU", base: 600 },
-      "Trial Operator": { prefix: "TOU", base: 700 }
+      // "Operator" has no callsign code of its own on purpose — promoting
+      // from TOU trial to Operator is a role-only change, so the officer
+      // keeps whatever callsign they already carry from TOU trial.
+      "TOU trial": { prefix: "TOU", base: 550 }
     },
     // CIU and TOU use their own named ranks below Incremental Sergeant
     // (Detective / Operator tracks) instead of the shared ladder, so
@@ -1188,7 +1191,7 @@
     },
     tou: {
       label: "Tactical Operations Unit",
-      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the standard ladder through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Senior Operator, Operator, Trial Operator.",
+      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the standard ladder through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Lead Operator, Senior Operator, Operator, TOU trial. Operator has no callsign code of its own — promoting from TOU trial keeps the same callsign and only changes Discord roles.",
       ranks: TOU_RANKS
     },
     crime: {
