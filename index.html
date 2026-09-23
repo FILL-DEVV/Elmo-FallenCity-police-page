@@ -1299,10 +1299,6 @@
       const row = document.getElementById('entry-row-' + key);
       if(row) row.style.display = p.canAdd ? '' : 'none';
     });
-    // Temporary one-off structure-migration button — remove along with
-    // api/officers/migrate-structure.js once the backfill has been run.
-    const migrateBtn = document.getElementById('migrate-structure-btn');
-    if(migrateBtn) migrateBtn.style.display = p.canImportRoster ? '' : 'none';
     // Temporary one-off duplicate-callsign cleanup button — remove along
     // with api/officers/fix-duplicate-callsigns.js once this has been run.
     const fixDupesBtn = document.getElementById('fix-duplicate-callsigns-btn');
@@ -1845,7 +1841,7 @@
         <span class="pill" id="entry-count-label-${key}">0 rows</span>
         <span class="pill" id="filtered-count-pill-${key}"></span>
         <div class="spacer"></div>
-        ${key === 'general' ? `<button class="btn" id="migrate-structure-btn" type="button">Migrate structure</button><button class="btn" id="fix-duplicate-callsigns-btn" type="button">Fix duplicate callsigns</button>` : ''}
+        ${key === 'general' ? `<button class="btn" id="fix-duplicate-callsigns-btn" type="button">Fix duplicate callsigns</button>` : ''}
         <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
       </div>
 
@@ -2378,33 +2374,6 @@
     // Pre-fill the first suggested callsign for this division's default rank.
     document.getElementById('f-callsign-' + key).value = nextCallsignForRank(key, rankSelect.value);
   });
-
-  // ---------- TEMPORARY: one-off structure-migration button ----------
-  // Backfills every officer's rank string, callsign, and Discord roles
-  // to match the Sept 2026 restructuring. Remove this block, the button
-  // in the per-division template above, its gating in
-  // applyPermissionGating, and api/officers/migrate-structure.js once
-  // this has been run.
-  function wireMigrateStructure(){
-    const btn = document.getElementById('migrate-structure-btn');
-    if(!btn) return;
-    btn.addEventListener('click', async () => {
-      showConfirm('Run the structure migration? This updates every officer\'s rank/callsign to the new scheme and grants any missing Discord roles across the whole roster.', async () => {
-        btn.disabled = true;
-        btn.textContent = 'Migrating…';
-        try{
-          const result = await apiPost('/api/officers/migrate-structure', {});
-          btn.textContent = `Done: ${result.renamed} renamed, ${result.callsignsReassigned} callsigns, ${result.rolesSynced}/${result.checked} synced` + (result.errors && result.errors.length ? ` (${result.errors.length} errors — see console)` : '');
-          if(result.errors && result.errors.length) console.error('Migration errors:', result.errors);
-          await reloadAll();
-        }catch(e){
-          btn.textContent = 'Migration failed — see console';
-          btn.disabled = false;
-        }
-      });
-    });
-  }
-  wireMigrateStructure();
 
   // ---------- TEMPORARY: one-off duplicate-callsign cleanup button ----------
   // Finds every callsign currently held by more than one officer (caused
