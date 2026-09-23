@@ -1299,10 +1299,6 @@
       const row = document.getElementById('entry-row-' + key);
       if(row) row.style.display = p.canAdd ? '' : 'none';
     });
-    // Temporary one-off duplicate-callsign cleanup button — remove along
-    // with api/officers/fix-duplicate-callsigns.js once this has been run.
-    const fixDupesBtn = document.getElementById('fix-duplicate-callsigns-btn');
-    if(fixDupesBtn) fixDupesBtn.style.display = p.canImportRoster ? '' : 'none';
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
@@ -1841,7 +1837,6 @@
         <span class="pill" id="entry-count-label-${key}">0 rows</span>
         <span class="pill" id="filtered-count-pill-${key}"></span>
         <div class="spacer"></div>
-        ${key === 'general' ? `<button class="btn" id="fix-duplicate-callsigns-btn" type="button">Fix duplicate callsigns</button>` : ''}
         <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
       </div>
 
@@ -2374,35 +2369,6 @@
     // Pre-fill the first suggested callsign for this division's default rank.
     document.getElementById('f-callsign-' + key).value = nextCallsignForRank(key, rankSelect.value);
   });
-
-  // ---------- TEMPORARY: one-off duplicate-callsign cleanup button ----------
-  // Finds every callsign currently held by more than one officer (caused
-  // by the Operator/Detective callsign-inheritance bug, now fixed in
-  // nextCallsignForRank) and reassigns the extras to genuinely free
-  // numbers. Remove this block, the button in the per-division template
-  // above, its gating in applyPermissionGating, and
-  // api/officers/fix-duplicate-callsigns.js once this has been run.
-  function wireFixDuplicateCallsigns(){
-    const btn = document.getElementById('fix-duplicate-callsigns-btn');
-    if(!btn) return;
-    btn.addEventListener('click', async () => {
-      showConfirm('Find and fix duplicate callsigns? The earliest-created officer in each duplicate group keeps their callsign; everyone else sharing it gets reassigned to a free number.', async () => {
-        btn.disabled = true;
-        btn.textContent = 'Checking…';
-        try{
-          const result = await apiPost('/api/officers/fix-duplicate-callsigns', {});
-          btn.textContent = `Done: ${result.duplicateGroups} duplicate group(s), ${result.reassigned} reassigned` + (result.errors && result.errors.length ? ` (${result.errors.length} errors — see console)` : '');
-          if(result.details && result.details.length) console.log('Callsigns reassigned:', result.details);
-          if(result.errors && result.errors.length) console.error('Fix errors:', result.errors);
-          await reloadAll();
-        }catch(e){
-          btn.textContent = 'Fix failed — see console';
-          btn.disabled = false;
-        }
-      });
-    });
-  }
-  wireFixDuplicateCallsigns();
 
   document.addEventListener('click', () => {
     document.querySelectorAll('.filter-pop.open').forEach(p => p.classList.remove('open'));
