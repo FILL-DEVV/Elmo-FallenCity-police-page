@@ -23,7 +23,10 @@ const DIVISION_ROLE_TAG = {
 const NEVER_REMOVE_ROLES = new Set(['general duties']);
 
 // Full rank ladder, most senior first — same order as the app's RANKS
-// list — used to work out "Incremental Sergeant and above".
+// list — used to work out "Incremental Sergeant and above". "Sergeant"
+// is kept here as a historical rung even though no division's rank is
+// literally named that anymore (general/highway renamed it to "GD
+// supervisor"); it's inert but harmless to leave in the ladder.
 const RANK_LADDER = [
   'Commissioner', 'Deputy Commissioner', 'Assistant Commissioner',
   'Chief Superintendent', 'Superintendent', 'Chief Inspector',
@@ -38,7 +41,9 @@ const INCREMENTAL_SERGEANT_INDEX = RANK_ORDER['Incremental Sergeant'];
 // above, by division. Chief Inspector and above route to the shared
 // "High Command Team" tier instead of a real division, so they never hit
 // this table — it only applies to the division-specific ladder
-// (Inspector, Senior Sergeant, Incremental Sergeant themselves).
+// (Inspector, Senior Sergeant themselves; Incremental Sergeant now has
+// its own explicit entry in RANK_SPECIFIC_ROLE_IDS below for every
+// division that's been migrated, so it no longer reaches this fallback).
 const SENIOR_TIER_ROLE_IDS = {
   general: ['1470033826892873955', '1525134536365703249', '1525134748761063677'],
   tou: ['1467025802767110329', '1525134536365703249', '1525134748761063677'],
@@ -46,34 +51,38 @@ const SENIOR_TIER_ROLE_IDS = {
   crime: ['1467025962217767075', '1470364244225687767', '1525134536365703249', '1525134748761063677']
 };
 
-// Leadership-role IDs held specifically at the Sergeant rank (one tier
-// below Incremental Sergeant), by division. Dead for crime/tou now that
-// their Sergeant-tier rank was renamed (Detective Supervisor / TOU
-// Supervisor) — see RANK_SPECIFIC_ROLE_IDS below, which takes over for
-// those two divisions' full custom ladder — but left as-is since
-// general/highway still use the plain "Sergeant" name.
-const SERGEANT_TIER_ROLE_IDS = {
-  general: ['1525134748761063677'],
-  tou: ['1470364203503321212', '1525134748761063677'],
-  highway: ['1470364089338429450', '1525134748761063677'],
-  crime: ['1525134748761063677', '1470364203503321212']
-};
-
-// Explicit role-ID set an officer should hold for each rank of CIU's and
-// TOU's renamed Detective/Operator ladders (Sergeant through Senior
-// Constable renamed, plus a new bottom rank in CIU's case). Keyed by
-// rank name directly, since these ranks don't fit the generic
-// Sergeant/Incremental-Sergeant naming the two maps above were built
-// around. Diffed old-rank-set vs new-rank-set on every promotion, same
-// as the maps above, so a role is added when newly earned and stripped
-// when no longer held — regardless of how many ranks someone jumps.
+// Explicit role-ID set an officer should hold for each rank, keyed by
+// rank name directly — this takes priority over every fallback below.
+// Started as CIU/TOU's renamed Detective/Operator ladders; now also
+// covers general/highway/crime's Incremental Sergeant and supervisor
+// tiers now that those moved off the generic threshold/name-matching
+// rules. Diffed old-rank-set vs new-rank-set on every promotion, so a
+// role is added when newly earned and stripped when no longer held —
+// regardless of how many ranks someone jumps. An empty array (e.g.
+// general's "GD supervisor") is a deliberate "no extra roles for this
+// rank", not an omission — it still takes priority over the generic
+// fallback below.
 const RANK_SPECIFIC_ROLE_IDS = {
+  general: {
+    'Incremental Sergeant': ['1545715001736695838'],
+    'GD supervisor': [],
+    'Incremental Senior Constable': ['1545713949373243403']
+  },
+  highway: {
+    'Incremental Sergeant': ['1545715001736695838'],
+    'GD supervisor': ['1470364089338429450'],
+    'Incremental Senior Constable': ['1545713949373243403']
+  },
   crime: {
-    'Detective Supervisor': ['1525134667714400276', '1470364244225687767'],
-    'Lead Detective': ['1445629707721642045'],
-    'Senior Detective': ['1545713949373243403'],
-    'Detective': ['1445628002724745296'],
-    'Trial Detective': ['1448247016323944680', '1445628002724745296']
+    'Incremental Sergeant': ['1545715001736695838'],
+    'Detective Supervisor': ['1470364244225687767', '1525134667714400276'],
+    'Lead Detective': ['1552228334346182776', '1445629707721642045'],
+    'Senior Detective': ['1552228148945358939', '1545713949373243403'],
+    // "Detective" shares its second role with "Trial Detective" — an
+    // officer promoted between the two keeps that role and only the
+    // rank-specific role changes, same pattern as TOU's Operator/trial.
+    'Detective': ['1552227793348075591', '1445628002724745296'],
+    'Trial Detective': ['1445628002724745296']
   },
   tou: {
     'TOU Supervisor': ['1470364203503321212', '1525134667714400276'],
@@ -91,7 +100,8 @@ const RANK_SPECIFIC_ROLE_IDS = {
 // regardless of which specific rank they hold there.
 const DIVISION_WIDE_ROLE_IDS = {
   crime: ['1525135433770729625'],
-  tou: ['1525135421271441458']
+  tou: ['1525135421271441458'],
+  highway: ['1525135429643276349']
 };
 
 function isDiscordId(v) {
@@ -117,20 +127,19 @@ function divisionRoleName(rank, listKey) {
 }
 
 // The leadership/tier-specific role IDs an officer should hold for a
-// given rank + division. Checks CIU/TOU's explicit per-rank map first,
-// then falls back to the generic Sergeant / Incremental-Sergeant-and-
-// above threshold rule used by general/highway (and by crime/tou's own
-// Inspector, Senior Sergeant and Incremental Sergeant, which weren't
-// renamed and still hit the threshold branch below). Every crime/tou
-// rank also picks up that division's blanket role on top.
+// given rank + division. Checks the explicit per-rank map first, then
+// falls back to the generic Incremental-Sergeant-and-above threshold
+// rule (used only by Inspector/Senior Sergeant now, for every division
+// that's had its Incremental Sergeant rung migrated to an explicit
+// entry above). Every crime/tou/highway rank also picks up that
+// division's blanket role on top.
 function milestoneRoleIds(rank, listKey) {
   if (!rank) return [];
   let ids = [];
   if (RANK_SPECIFIC_ROLE_IDS[listKey] && RANK_SPECIFIC_ROLE_IDS[listKey][rank]) {
     ids = RANK_SPECIFIC_ROLE_IDS[listKey][rank];
   } else if (DIVISION_ROLE_TAG[listKey]) {
-    if (rank === 'Sergeant') ids = SERGEANT_TIER_ROLE_IDS[listKey] || [];
-    else if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
+    if (RANK_ORDER[rank] !== undefined && RANK_ORDER[rank] <= INCREMENTAL_SERGEANT_INDEX) {
       ids = SENIOR_TIER_ROLE_IDS[listKey] || [];
     }
   }
@@ -209,15 +218,15 @@ async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValu
   });
 }
 
-// Syncs the leadership roles (Sergeant tier / Incremental Sergeant+ tier,
-// or CIU/TOU's per-rank Detective/Operator sets, plus each division's
-// blanket role) by diffing what the officer's OLD rank+division earned
-// against what their NEW rank+division earns: roles only in the old set
-// are stripped (demotion, or moving to a division with a different role
-// list), roles only in the new set are added (promotion into a
-// qualifying rank). A role held under both stays untouched. Pass
-// oldRank/oldListKey as null for a brand-new officer (nothing to strip,
-// just grants what's due).
+// Syncs the leadership roles (per-rank sets from RANK_SPECIFIC_ROLE_IDS,
+// or the generic Incremental-Sergeant-and-above threshold, plus each
+// division's blanket role) by diffing what the officer's OLD rank+
+// division earned against what their NEW rank+division earns: roles
+// only in the old set are stripped (demotion, or moving to a division
+// with a different role list), roles only in the new set are added
+// (promotion into a qualifying rank). A role held under both stays
+// untouched. Pass oldRank/oldListKey as null for a brand-new officer
+// (nothing to strip, just grants what's due).
 async function syncMilestoneRoles({ guildId, botToken, discordUserId, oldRank, oldListKey, newRank, newListKey }) {
   if (!isDiscordId(discordUserId)) return;
 
