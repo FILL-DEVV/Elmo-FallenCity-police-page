@@ -111,6 +111,21 @@ async function editOriginalInteractionResponse(applicationId, interactionToken, 
   return res.json();
 }
 
+// Sends a NEW followup message for an interaction that's already been
+// acknowledged (deferred or otherwise) — used instead of
+// editOriginalInteractionResponse when the reply shouldn't touch the
+// original message itself, e.g. an ephemeral "you can't do that" after
+// deferring an update.
+async function sendInteractionFollowup(applicationId, interactionToken, payload) {
+  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to send interaction followup: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
 // Creates a PRIVATE thread under a channel — used to post something only
 // the applicant (and staff able to see private threads) will see, since
 // Discord has no way for a bot to post a truly ephemeral message into a
@@ -190,6 +205,6 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
-  editOriginalInteractionResponse, createPrivateThread, addThreadMember, archiveThread,
+  editOriginalInteractionResponse, sendInteractionFollowup, createPrivateThread, addThreadMember, archiveThread,
   addMemberRole, removeMemberRole, setMemberRoles
 };
