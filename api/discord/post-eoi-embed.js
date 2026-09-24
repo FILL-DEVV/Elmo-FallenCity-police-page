@@ -1,9 +1,6 @@
 const { getSession } = require('../_lib/session');
 const { sendChannelPayload } = require('../_lib/discord');
-const { buildEoiSelectPayload } = require('../_lib/eoiConfig');
-
-// Channel the Certification EOI dropdown embed gets posted to.
-const EOI_CHANNEL_ID = '1534466794411004086';
+const { buildEoiSelectPayload, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
 
 // Posts (or re-posts) the "Certification EOIs" dropdown embed — call
 // this again after editing CERTIFICATIONS in eoiConfig.js to refresh
