@@ -15,6 +15,9 @@
 // - discordRoleName: exact Discord role name granted automatically when
 //   an Accept button is clicked. Must match a real server role name
 //   (case-insensitive) or the grant is skipped and logged.
+// - reviewChannelId: the Discord channel completed applications for
+//   THIS certification get posted to for Accept/Deny — each
+//   certification can route to its own channel.
 const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
@@ -24,7 +27,8 @@ const CERTIFICATIONS = {
       { id: 'q2', label: 'Relevant experience?', style: 'long', required: true },
       { id: 'q3', label: 'Anything else we should know?', style: 'long', required: false }
     ],
-    discordRoleName: 'Test Cert'
+    discordRoleName: 'Test Cert',
+    reviewChannelId: 'REPLACE_ME_REVIEW_CHANNEL_ID'
   }
 };
 
