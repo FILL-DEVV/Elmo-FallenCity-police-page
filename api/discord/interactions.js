@@ -11,11 +11,19 @@ const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/
 // bytes are read manually below.
 module.exports.config = { api: { bodyParser: false } };
 
+// Collects the raw request body as a single Buffer. Critically, this
+// buffers the raw bytes and only decodes to a string ONCE the whole body
+// has arrived — decoding each chunk separately (e.g. via `data += chunk`,
+// which implicitly calls chunk.toString()) can corrupt a multi-byte
+// UTF-8 character (an em dash, an emoji) that happens to land on a
+// chunk boundary, silently producing a different byte sequence than
+// what Discord actually signed and making signature verification fail
+// intermittently on larger payloads.
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => { data += chunk; });
-    req.on('end', () => resolve(data));
+    const chunks = [];
+    req.on('data', (chunk) => { chunks.push(chunk); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
@@ -107,7 +115,7 @@ module.exports = async (req, res) => {
 
   let interaction;
   try {
-    interaction = JSON.parse(rawBody);
+    interaction = JSON.parse(rawBody.toString('utf8'));
   } catch (e) {
     return res.status(400).send('Bad JSON');
   }
