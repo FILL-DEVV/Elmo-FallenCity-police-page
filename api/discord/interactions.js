@@ -2,7 +2,7 @@ const { verifyDiscordRequest } = require('../_lib/discordVerify');
 const { CERTIFICATIONS, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
 const {
   fetchGuildRoles, addMemberRole, sendChannelPayload, editOriginalInteractionResponse,
-  createPrivateThread, addThreadMember, archiveThread
+  sendInteractionFollowup, createPrivateThread, addThreadMember, archiveThread
 } = require('../_lib/discord');
 const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/permissions');
 
@@ -156,27 +156,30 @@ module.exports = async (req, res) => {
       const clickerRoles = (interaction.member && interaction.member.roles) || [];
       const clickerName = (interaction.member && interaction.member.user && interaction.member.user.username) || 'someone';
 
+      // Ack immediately (a "deferred update" — Discord shows the button
+      // click as received right away) as the VERY FIRST thing, before
+      // even the permission check below — that check is itself a
+      // Discord API round trip (fetching guild roles), and if it ran
+      // first it would still eat into Discord's 3-second response
+      // window. Once that's blown, Discord marks the interaction as
+      // failed and won't accept a later edit-original call even if we
+      // eventually do send the deferred ack ("Unknown Message"). The
+      // thread creation and message edit that follow are further,
+      // slower work that this same deferral protects.
+      res.status(200).json({ type: 6 });
+
       const allowed = await isApprover(clickerRoles, guildId, botToken);
       if (!allowed) {
-        return res.status(200).json({
-          type: 4,
-          data: { content: 'You do not have permission to review this application.', flags: 64 }
-        });
+        try {
+          await sendInteractionFollowup(interaction.application_id, interaction.token, {
+            content: 'You do not have permission to review this application.',
+            flags: 64
+          });
+        } catch (e) {
+          console.error('interactions: could not send permission-denied followup:', e);
+        }
+        return;
       }
-
-      // Ack immediately (a "deferred update" — Discord shows the button
-      // click as received right away) BEFORE any of the slow work below.
-      // The thread creation and the message edit are each a separate
-      // Discord API round trip; done sequentially before responding, as
-      // this used to, their combined latency can exceed Discord's
-      // 3-second interaction response window — when that happens Discord
-      // shows the interaction as failed even though our function keeps
-      // running afterward and the side effects still land, which is
-      // exactly the "roles work but nothing visibly happens" symptom
-      // this app hit before. Deferring first avoids that: the actual
-      // update happens via the edit-original-response call at the end
-      // instead.
-      res.status(200).json({ type: 6 });
 
       const original = interaction.message || {};
       const baseEmbed = (original.embeds && original.embeds[0]) || {};
