@@ -47,36 +47,36 @@ const CERTIFICATIONS = {
     questions: [
       {
         id: 'q1',
-        label: 'Why do you wish to join PolAir? What do you believe are the primary roles of PolAir are?',
-        modalLabel: 'Why join PolAir & its roles',
+        label: 'What do you believe are the primary roles of PolAir?',
+        modalLabel: 'Primary roles of PolAir?',
         style: 'long',
         required: true
       },
       {
         id: 'q2',
-        label: 'How can aerial support improve police operations? Provide an example.',
-        modalLabel: 'Value of aerial support + example',
+        label: 'How can aerial support improve police operations? Provide an example of when PolAir should be deployed.',
+        modalLabel: 'Aerial support & deployment.',
         style: 'long',
         required: true
       },
       {
         id: 'q3',
-        label: 'Explain how you would coordinate and communicate with ground units.',
-        modalLabel: 'Coordination with ground units',
+        label: 'Explain how you would coordinate and communicate with ground units, including Highway Patrol and TOU, during a major incident or pursuit?',
+        modalLabel: 'Communication/radio coms',
         style: 'long',
         required: true
       },
       {
         id: 'q4',
-        label: 'Why is situational awareness important, and how does it contribute to officer and public safety?',
-        modalLabel: 'Importance of situational awareness',
+        label: 'How would you prioritise requests if multiple units requiring PolAir assistance at the same time?',
+        modalLabel: 'Request Prioritisation.',
         style: 'long',
         required: true
       },
       {
         id: 'q5',
         label: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
-        modalLabel: 'Aviation/aerial experience',
+        modalLabel: 'Past aviation experience',
         style: 'long',
         required: true
       }
