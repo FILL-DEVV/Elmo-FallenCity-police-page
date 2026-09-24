@@ -49,6 +49,7 @@ const CERTIFICATIONS = {
         id: 'q1',
         label: 'What do you believe are the primary roles of PolAir?',
         modalLabel: 'Primary roles of PolAir?',
+        placeholder: 'What do you believe are the primary roles of PolAir?',
         style: 'long',
         required: true
       },
@@ -56,6 +57,7 @@ const CERTIFICATIONS = {
         id: 'q2',
         label: 'How can aerial support improve police operations? Provide an example of when PolAir should be deployed.',
         modalLabel: 'Aerial support & deployment.',
+        placeholder: 'How can aerial support improve police operations? Give an example of when PolAir should deploy.',
         style: 'long',
         required: true
       },
@@ -63,6 +65,7 @@ const CERTIFICATIONS = {
         id: 'q3',
         label: 'Explain how you would coordinate and communicate with ground units, including Highway Patrol and TOU, during a major incident or pursuit?',
         modalLabel: 'Communication/radio coms',
+        placeholder: 'How would you coordinate & communicate with ground units (Highway Patrol, TOU) during an incident?',
         style: 'long',
         required: true
       },
@@ -70,6 +73,7 @@ const CERTIFICATIONS = {
         id: 'q4',
         label: 'How would you prioritise requests if multiple units requiring PolAir assistance at the same time?',
         modalLabel: 'Request Prioritisation.',
+        placeholder: 'How would you prioritise requests if multiple units requiring PolAir assistance at the same time?',
         style: 'long',
         required: true
       },
@@ -77,6 +81,7 @@ const CERTIFICATIONS = {
         id: 'q5',
         label: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
         modalLabel: 'Past aviation experience',
+        placeholder: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
         style: 'long',
         required: true
       }
