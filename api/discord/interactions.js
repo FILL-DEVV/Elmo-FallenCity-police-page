@@ -3,11 +3,6 @@ const { CERTIFICATIONS } = require('../_lib/eoiConfig');
 const { fetchGuildRoles, addMemberRole, sendChannelPayload } = require('../_lib/discord');
 const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/permissions');
 
-// Where completed applications (with Accept/Deny buttons) get posted
-// for review.
-// TODO: set this to the real review channel ID.
-const REVIEW_CHANNEL_ID = 'REPLACE_ME_REVIEW_CHANNEL_ID';
-
 // Discord interactions must be verified with the raw request body, so
 // the platform's default JSON body-parsing is disabled here and the raw
 // bytes are read manually below.
@@ -184,24 +179,28 @@ module.exports = async (req, res) => {
           name: q.label.slice(0, 256),
           value: (answers[q.id] || '—').slice(0, 1024)
         }));
-        try {
-          await sendChannelPayload(REVIEW_CHANNEL_ID, botToken, {
-            embeds: [{
-              title: cert.label + ' — Application',
-              description: `Applicant: <@${applicantId}> (${applicantName})`,
-              color: 0x3b82f6,
-              fields
-            }],
-            components: [{
-              type: 1,
-              components: [
-                { type: 2, style: 3, label: 'Accept', custom_id: `eoi:accept:${certKey}:${applicantId}` },
-                { type: 2, style: 4, label: 'Deny', custom_id: `eoi:deny:${certKey}:${applicantId}` }
-              ]
-            }]
-          });
-        } catch (e) {
-          console.error('interactions: could not post application to review channel:', e);
+        if (!cert.reviewChannelId || cert.reviewChannelId === 'REPLACE_ME_REVIEW_CHANNEL_ID') {
+          console.error('interactions: "' + certKey + '" has no reviewChannelId set in eoiConfig.js — application not posted');
+        } else {
+          try {
+            await sendChannelPayload(cert.reviewChannelId, botToken, {
+              embeds: [{
+                title: cert.label + ' — Application',
+                description: `Applicant: <@${applicantId}> (${applicantName})`,
+                color: 0x3b82f6,
+                fields
+              }],
+              components: [{
+                type: 1,
+                components: [
+                  { type: 2, style: 3, label: 'Accept', custom_id: `eoi:accept:${certKey}:${applicantId}` },
+                  { type: 2, style: 4, label: 'Deny', custom_id: `eoi:deny:${certKey}:${applicantId}` }
+                ]
+              }]
+            });
+          } catch (e) {
+            console.error('interactions: could not post application to review channel:', e);
+          }
         }
       }
 
