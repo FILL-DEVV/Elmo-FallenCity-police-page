@@ -207,14 +207,38 @@ async function syncRankRole({ guildId, botToken, discordUserId, oldRank, oldList
   });
 }
 
-// Removes the officer's old FTO-status role (if any) and adds the new one.
-// FTO status values ("FTO", "Senior FTO", "FTO supervisor", "FTO Director",
-// "Head Of Academy") are assumed to match the Discord role names exactly.
+// The base FTO role — held by everyone with any FTO status at all,
+// including the higher tiers below. Unlike the tier-specific role, this
+// one is never swapped out on a promotion between tiers; it's only ever
+// removed when the status is cleared back to None.
+const FTO_BASE_ROLE_NAME = 'FTO';
+
+// Grants/strips the officer's FTO roles for a status change. Two roles
+// are tracked independently:
+//  - the base "FTO" role: added the moment any status is set, and only
+//    ever removed when newValue is cleared to None — it stays through
+//    every promotion/demotion between tiers (FTO -> Senior FTO -> FTO
+//    supervisor -> FTO Director -> Head Of Academy and back).
+//  - the tier-specific role: "Senior FTO", "FTO supervisor",
+//    "FTO Director" or "Head Of Academy" (nothing extra for plain
+//    "FTO", since the base role above already covers it) — swapped
+//    normally, same as every other named role on this page.
 async function syncFtoRole({ guildId, botToken, discordUserId, oldValue, newValue }) {
+  // Base role: granted the moment they go from no status to any status,
+  // stripped only when they go from any status to none. Untouched on
+  // every change between two non-empty tiers.
+  if (newValue && !oldValue) {
+    await swapNamedRole({ guildId, botToken, discordUserId, oldName: null, newName: FTO_BASE_ROLE_NAME });
+  } else if (!newValue && oldValue) {
+    await swapNamedRole({ guildId, botToken, discordUserId, oldName: FTO_BASE_ROLE_NAME, newName: null });
+  }
+
+  const oldTier = oldValue && oldValue !== FTO_BASE_ROLE_NAME ? oldValue : null;
+  const newTier = newValue && newValue !== FTO_BASE_ROLE_NAME ? newValue : null;
   await swapNamedRole({
     guildId, botToken, discordUserId,
-    oldName: oldValue || null,
-    newName: newValue || null
+    oldName: oldTier,
+    newName: newTier
   });
 }
 
