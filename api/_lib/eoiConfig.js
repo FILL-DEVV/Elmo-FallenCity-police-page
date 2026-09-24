@@ -12,9 +12,20 @@
 //   applicant's actual rank.
 // - questions: up to 5 (Discord's popup-form limit), each becomes one
 //   text box. style "short" is a single line, "long" is a paragraph box.
+// - label (on a question): the FULL question text — shown as the field
+//   name on the review embed (reviewers see the whole thing, no limit
+//   that matters here). Discord's popup form only allows a 45-character
+//   visible label though, so when a question's wording is longer than
+//   that, also set modalLabel (a short version) and optionally
+//   placeholder (up to 100 chars) so the applicant still gets useful
+//   context in the form itself even though the full wording only shows
+//   up later, in the reviewers' embed.
 // - discordRoleName: exact Discord role name granted automatically when
-//   an Accept button is clicked. Must match a real server role name
-//   (case-insensitive) or the grant is skipped and logged.
+//   an Accept button is clicked, matched case-insensitively against the
+//   server's roles. Ignored if discordRoleId is set.
+// - discordRoleId: the Discord role's ID, granted directly with no name
+//   lookup — preferred over discordRoleName since it can't be broken by
+//   a role rename later. If both are set, discordRoleId wins.
 // - reviewChannelId: the Discord channel completed applications for
 //   THIS certification get posted to for Accept/Deny — each
 //   certification can route to its own channel.
@@ -29,6 +40,56 @@ const CERTIFICATIONS = {
     ],
     discordRoleName: 'Test Cert',
     reviewChannelId: 'REPLACE_ME_REVIEW_CHANNEL_ID'
+  },
+  polair: {
+    label: 'PolAir',
+    minRankNote: 'Senior Constable +',
+    // The 8 questions supplied are merged into 5 boxes (Discord's popup
+    // form hard limit) — no question was dropped, related pairs just
+    // share one paragraph box. Reviewers see every original question
+    // verbatim as its own field on the review embed regardless of how
+    // the boxes were grouped for the applicant.
+    questions: [
+      {
+        id: 'q1',
+        label: 'Why do you wish to join PolAir? What do you believe are the primary roles of PolAir?',
+        modalLabel: 'Why join PolAir & its roles',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q2',
+        label: 'How can aerial support improve police operations? Provide an example of when PolAir should be deployed.',
+        modalLabel: 'Value of aerial support + example',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q3',
+        label: 'Explain how you would coordinate and communicate with ground units, including Highway Patrol and TOU, during a major incident or pursuit? How would you prioritise requests if multiple units required PolAir assistance at the same time?',
+        modalLabel: 'Coordination & prioritising requests',
+        placeholder: 'Ground-unit coordination during an incident, and prioritising when demand exceeds capacity',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q4',
+        label: 'Why is situational awareness important, and how does it contribute to officer and public safety? What experience do you have with aviation, aerial operations, or similar roles (if any)?',
+        modalLabel: 'Situational awareness & experience',
+        placeholder: 'Importance of situational awareness, plus any aviation/aerial experience you have',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q5',
+        label: 'Why should you be selected for PolAir, and is there anything else the command team should know about your application?',
+        modalLabel: 'Why you + anything else',
+        style: 'long',
+        required: true
+      }
+    ],
+    discordRoleId: '1470382539217571921',
+    reviewChannelId: '1534470322655596694'
   }
 };
 
