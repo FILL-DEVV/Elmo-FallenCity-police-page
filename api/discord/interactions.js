@@ -1,6 +1,9 @@
 const { verifyDiscordRequest } = require('../_lib/discordVerify');
-const { CERTIFICATIONS } = require('../_lib/eoiConfig');
-const { fetchGuildRoles, addMemberRole, sendChannelPayload, editOriginalInteractionResponse } = require('../_lib/discord');
+const { CERTIFICATIONS, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
+const {
+  fetchGuildRoles, addMemberRole, sendChannelPayload, editOriginalInteractionResponse,
+  createPrivateThread, addThreadMember, archiveThread
+} = require('../_lib/discord');
 const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/permissions');
 
 // Discord interactions must be verified with the raw request body, so
@@ -66,6 +69,22 @@ function buildModalPayload(certKey, cert) {
   };
 }
 
+// Grants the certification's Discord role to a user — by ID directly if
+// set (preferred), otherwise by name lookup. Only called from the
+// Acknowledge handler now: Accept no longer grants the role itself, it
+// just opens the private acknowledgement thread.
+async function grantCertRole(cert, userId, guildId, botToken) {
+  if (!cert || (!cert.discordRoleId && !cert.discordRoleName)) return;
+  if (cert.discordRoleId) {
+    await addMemberRole(guildId, userId, cert.discordRoleId, botToken);
+    return;
+  }
+  const roles = await fetchGuildRoles(guildId, botToken);
+  const role = roles.find((r) => r.name.toLowerCase() === cert.discordRoleName.toLowerCase());
+  if (role) await addMemberRole(guildId, userId, role.id, botToken);
+  else console.error('interactions: no server role named "' + cert.discordRoleName + '"');
+}
+
 function extractModalAnswers(interactionData) {
   const answers = {};
   (interactionData.components || []).forEach((row) => {
@@ -102,8 +121,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ type: 1 });
   }
 
-  // Message component: either the "Make a selection" dropdown, or an
-  // Accept/Deny button on a posted application.
+  // Message component: either the "Make a selection" dropdown, an
+  // Accept/Deny button on a posted application, or the applicant's
+  // Acknowledge button in their private thread.
   if (interaction.type === 3) {
     const customId = interaction.data.custom_id || '';
 
@@ -138,32 +158,48 @@ module.exports = async (req, res) => {
 
       // Ack immediately (a "deferred update" — Discord shows the button
       // click as received right away) BEFORE any of the slow work below.
-      // The role grant and the message edit are each a separate Discord
-      // API round trip; done sequentially before responding, as this
-      // used to, their combined latency can exceed Discord's 3-second
-      // interaction response window — when that happens Discord shows
-      // the interaction as failed even though our function keeps running
-      // afterward and the role grant still lands, which is exactly the
-      // "roles work but nothing visibly happens" symptom. Deferring
-      // first avoids that: the actual update happens via the
-      // edit-original-response call at the end instead.
+      // The thread creation and the message edit are each a separate
+      // Discord API round trip; done sequentially before responding, as
+      // this used to, their combined latency can exceed Discord's
+      // 3-second interaction response window — when that happens Discord
+      // shows the interaction as failed even though our function keeps
+      // running afterward and the side effects still land, which is
+      // exactly the "roles work but nothing visibly happens" symptom
+      // this app hit before. Deferring first avoids that: the actual
+      // update happens via the edit-original-response call at the end
+      // instead.
       res.status(200).json({ type: 6 });
 
       const original = interaction.message || {};
       const baseEmbed = (original.embeds && original.embeds[0]) || {};
 
-      if (action === 'accept' && cert && (cert.discordRoleId || cert.discordRoleName)) {
+      // On Accept: no role granted yet — that only happens once the
+      // applicant clicks Acknowledge below. Instead, open a private
+      // thread under the EOI channel with just the applicant added
+      // (Discord's nearest equivalent to a message only they can see,
+      // since a bot can't post a true ephemeral message outside of
+      // replying to that person's own interaction), ping them, and give
+      // them the Acknowledge button that actually grants the role.
+      if (action === 'accept' && cert) {
         try {
-          if (cert.discordRoleId) {
-            await addMemberRole(guildId, applicantId, cert.discordRoleId, botToken);
-          } else {
-            const roles = await fetchGuildRoles(guildId, botToken);
-            const role = roles.find((r) => r.name.toLowerCase() === cert.discordRoleName.toLowerCase());
-            if (role) await addMemberRole(guildId, applicantId, role.id, botToken);
-            else console.error('interactions: no server role named "' + cert.discordRoleName + '"');
-          }
+          const thread = await createPrivateThread(EOI_CHANNEL_ID, botToken, cert.label + ' — EOI Accepted');
+          await addThreadMember(thread.id, applicantId, botToken);
+          await sendChannelPayload(thread.id, botToken, {
+            content: `<@${applicantId}>`,
+            embeds: [{
+              title: cert.label + ' — Application Accepted',
+              description: 'Your application for **' + cert.label + '** has been accepted. Press Acknowledge below to receive the certification role.',
+              color: 0x2f8f5b
+            }],
+            components: [{
+              type: 1,
+              components: [
+                { type: 2, style: 3, label: 'Acknowledge', custom_id: `eoi:ack:${certKey}:${applicantId}` }
+              ]
+            }]
+          });
         } catch (e) {
-          console.error('interactions: role grant failed:', e);
+          console.error('interactions: could not create acknowledgement thread:', e);
         }
       }
 
@@ -183,6 +219,59 @@ module.exports = async (req, res) => {
         });
       } catch (e) {
         console.error('interactions: could not edit the original message after deferring:', e);
+      }
+      return;
+    }
+
+    if (customId.startsWith('eoi:ack:')) {
+      const parts = customId.split(':');
+      const certKey = parts[2];
+      const applicantId = parts[3];
+      const cert = CERTIFICATIONS[certKey];
+      const clickerId = interaction.member && interaction.member.user && interaction.member.user.id;
+
+      // Only the applicant themself can acknowledge — anyone else who
+      // somehow sees this thread (e.g. staff with thread-management
+      // permissions) clicking it should never grant the role to the
+      // wrong person.
+      if (clickerId !== applicantId) {
+        return res.status(200).json({
+          type: 4,
+          data: { content: 'Only the applicant can acknowledge this.', flags: 64 }
+        });
+      }
+
+      res.status(200).json({ type: 6 });
+
+      const original = interaction.message || {};
+      const baseEmbed = (original.embeds && original.embeds[0]) || {};
+
+      try {
+        await grantCertRole(cert, applicantId, guildId, botToken);
+      } catch (e) {
+        console.error('interactions: role grant on acknowledge failed:', e);
+      }
+
+      const updatedEmbed = {
+        ...baseEmbed,
+        color: 0x2f8f5b,
+        description: (baseEmbed.description || '') + '\n\n✅ **Acknowledged** — role granted.'
+      };
+
+      try {
+        await editOriginalInteractionResponse(interaction.application_id, interaction.token, {
+          embeds: [updatedEmbed],
+          components: []
+        });
+      } catch (e) {
+        console.error('interactions: could not edit acknowledgement message:', e);
+      }
+
+      // Best-effort tidy-up — never blocks anything above.
+      try {
+        await archiveThread(interaction.channel_id, botToken);
+      } catch (e) {
+        console.error('interactions: could not archive acknowledgement thread:', e);
       }
       return;
     }
