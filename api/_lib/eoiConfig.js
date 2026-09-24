@@ -1,7 +1,8 @@
 // Certification EOI catalogue — add a new certification by adding a new
 // entry here; the dropdown, the popup application form, the review
-// embed, and auto-granting the role on Accept all read from this one
-// list, so this file is the only thing that needs editing to add more.
+// embed, and auto-granting the role on Acknowledge all read from this
+// one list, so this file is the only thing that needs editing to add
+// more.
 //
 // - key: short slug (letters/numbers/hyphens only, no colons) — used
 //   inside component custom_ids. Keep it stable once posted: changing
@@ -21,14 +22,19 @@
 //   context in the form itself even though the full wording only shows
 //   up later, in the reviewers' embed.
 // - discordRoleName: exact Discord role name granted automatically when
-//   an Accept button is clicked, matched case-insensitively against the
-//   server's roles. Ignored if discordRoleId is set.
+//   the applicant clicks Acknowledge (after staff Accepts), matched
+//   case-insensitively against the server's roles. Ignored if
+//   discordRoleId is set.
 // - discordRoleId: the Discord role's ID, granted directly with no name
 //   lookup — preferred over discordRoleName since it can't be broken by
 //   a role rename later. If both are set, discordRoleId wins.
 // - reviewChannelId: the Discord channel completed applications for
 //   THIS certification get posted to for Accept/Deny — each
 //   certification can route to its own channel.
+// Channel the "Certification EOIs" dropdown embed lives in — also where
+// the private acknowledgement thread gets created on Accept.
+const EOI_CHANNEL_ID = '1534466794411004086';
+
 const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
@@ -166,4 +172,4 @@ function buildEoiSelectPayload() {
   };
 }
 
-module.exports = { CERTIFICATIONS, buildEoiSelectPayload };
+module.exports = { CERTIFICATIONS, buildEoiSelectPayload, EOI_CHANNEL_ID };
