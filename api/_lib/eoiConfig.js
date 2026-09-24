@@ -88,6 +88,54 @@ const CERTIFICATIONS = {
     ],
     discordRoleId: '1470382539217571921',
     reviewChannelId: '1534470322655596694'
+  },
+  sfc: {
+    label: 'SFC',
+    minRankNote: 'Senior Constable +',
+    questions: [
+      {
+        id: 'q1',
+        label: 'Describe a situation where you should NOT draw or use your 2 handed firearm.',
+        modalLabel: 'Situation 1',
+        placeholder: 'Describe a situation where you should NOT draw or use your 2 handed firearm.',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q2',
+        label: 'Describe a situation where you SHOULD draw or use your 2 handed firearm.',
+        modalLabel: 'Situation 2',
+        placeholder: 'Describe a situation where you SHOULD draw or use your 2 handed firearm.',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q3',
+        label: 'Why should the command team trust you with Specialised Firearms Certification, and how will you maintain your proficiency after being certified?',
+        modalLabel: 'Trust and proficiency',
+        placeholder: 'Why should command trust you with SFC, and how will you maintain proficiency after certification?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q4',
+        label: 'What would you do if a supervisor gave you an instruction you believed was unsafe or against policy?',
+        modalLabel: 'unsafe instructions',
+        placeholder: 'What would you do if a supervisor gave you an instruction you believed was unsafe or against policy?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q5',
+        label: 'Do you understand that if you breach the rules and guidelines of the SFC certification, It will be taken off you?',
+        modalLabel: 'Breach rules and guidelines',
+        placeholder: "Do you understand that breaching SFC's rules and guidelines means it will be taken off you?",
+        style: 'long',
+        required: true
+      }
+    ],
+    discordRoleId: '1483691612994408518',
+    reviewChannelId: '1534468202384330825'
   }
 };
 
