@@ -1,6 +1,6 @@
 const { verifyDiscordRequest } = require('../_lib/discordVerify');
 const { CERTIFICATIONS } = require('../_lib/eoiConfig');
-const { fetchGuildRoles, addMemberRole, sendChannelPayload } = require('../_lib/discord');
+const { fetchGuildRoles, addMemberRole, sendChannelPayload, sendDirectMessage } = require('../_lib/discord');
 const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/permissions');
 
 // Discord interactions must be verified with the raw request body, so
@@ -151,6 +151,24 @@ module.exports = async (req, res) => {
           }
         } catch (e) {
           console.error('interactions: role grant failed:', e);
+        }
+      }
+
+      // Notify the applicant by DM on acceptance. A one-off notification,
+      // not a conversation — see sendDirectMessage in _lib/discord.js.
+      // Never blocks the review outcome: a closed-DMs applicant or a
+      // blocked bot just means the notification silently fails.
+      if (action === 'accept' && applicantId) {
+        try {
+          await sendDirectMessage(applicantId, botToken, {
+            embeds: [{
+              title: (cert ? cert.label : 'Certification') + ' — Application Accepted',
+              description: 'Your application for **' + (cert ? cert.label : 'this certification') + '** has been accepted.',
+              color: 0x2f8f5b
+            }]
+          });
+        } catch (e) {
+          console.error('interactions: could not DM applicant about acceptance:', e);
         }
       }
 
