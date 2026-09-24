@@ -154,21 +154,25 @@ module.exports = async (req, res) => {
         }
       }
 
-      // Notify the applicant by DM on acceptance. A one-off notification,
-      // not a conversation — see sendDirectMessage in _lib/discord.js.
-      // Never blocks the review outcome: a closed-DMs applicant or a
-      // blocked bot just means the notification silently fails.
-      if (action === 'accept' && applicantId) {
+      // Notify the applicant by DM of the outcome. A one-off
+      // notification, not a conversation — see sendDirectMessage in
+      // _lib/discord.js. Never blocks the review outcome: a closed-DMs
+      // applicant or a blocked bot just means the notification silently
+      // fails.
+      if (applicantId) {
         try {
+          const certLabel = cert ? cert.label : 'this certification';
           await sendDirectMessage(applicantId, botToken, {
             embeds: [{
-              title: (cert ? cert.label : 'Certification') + ' — Application Accepted',
-              description: 'Your application for **' + (cert ? cert.label : 'this certification') + '** has been accepted.',
-              color: 0x2f8f5b
+              title: certLabel + (action === 'accept' ? ' — Application Accepted' : ' — Application Denied'),
+              description: action === 'accept'
+                ? 'Your application for **' + certLabel + '** has been accepted.'
+                : 'Your application for **' + certLabel + '** has been denied.',
+              color: action === 'accept' ? 0x2f8f5b : 0xe06a5f
             }]
           });
         } catch (e) {
-          console.error('interactions: could not DM applicant about acceptance:', e);
+          console.error('interactions: could not DM applicant about the review outcome:', e);
         }
       }
 
