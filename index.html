@@ -1312,14 +1312,9 @@
 
     // Senior command is a read-only aggregate view of the High Command
     // Team / Commissioned Office ranks (exec ranks plus Inspector /
-    // Senior Sergeant across every division), and also the Promote-
-    // popover target for the exec ranks — both gated to the same
-    // permission.
-    const srcmdTab = document.querySelector('#callsigns-tabstrip .unit-tab[data-div="srcmd"]');
-    if(srcmdTab) srcmdTab.style.display = p.canViewHighCommand ? '' : 'none';
-    if(srcmdTab && srcmdTab.style.display === 'none' && srcmdTab.classList.contains('active')){
-      activateCallsignDivision(DIVISION_KEYS[0]);
-    }
+    // Senior Sergeant across every division) — visible to everyone.
+    // Using it as a Promote-popover TARGET (i.e. actually promoting
+    // someone into an exec rank) stays gated to canViewHighCommand below.
     const srcmdPromoteOption = promoteDivisionSelect.querySelector('option[value="srcmd"]');
     if(srcmdPromoteOption) srcmdPromoteOption.disabled = !p.canViewHighCommand;
   }
