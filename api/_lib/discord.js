@@ -95,38 +95,6 @@ async function sendChannelPayload(channelId, botToken, payload) {
   return res.json();
 }
 
-// Opens (or reuses) a DM channel with a user and sends them a message —
-// a one-off notification, not a conversation: this is a plain REST call
-// and works fine from a serverless function. It does NOT let the bot
-// see or react to whatever the person replies with — reading a reply
-// back would need Discord's Gateway (a persistent connection), which
-// this app doesn't run. Fails harmlessly (throws, caller should catch)
-// if the user has DMs from server members disabled or has blocked the
-// bot — there is no way to detect that in advance.
-async function sendDirectMessage(userId, botToken, payload) {
-  const dmRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bot ${botToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ recipient_id: userId })
-  });
-  if (!dmRes.ok) throw new Error('Failed to open DM channel: ' + dmRes.status + ' ' + (await dmRes.text()));
-  const dmChannel = await dmRes.json();
-
-  const msgRes = await fetch(`${DISCORD_API}/channels/${dmChannel.id}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bot ${botToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!msgRes.ok) throw new Error('Failed to send DM: ' + msgRes.status + ' ' + (await msgRes.text()));
-  return msgRes.json();
-}
-
 // Edits the message an interaction was originally responding to — used
 // after the interaction was acknowledged with a DEFERRED response (type
 // 6), once the slower work that couldn't fit in Discord's 3-second
@@ -180,5 +148,5 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
-  sendDirectMessage, editOriginalInteractionResponse, addMemberRole, removeMemberRole, setMemberRoles
+  editOriginalInteractionResponse, addMemberRole, removeMemberRole, setMemberRoles
 };
