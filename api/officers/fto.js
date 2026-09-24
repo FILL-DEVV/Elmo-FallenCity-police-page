@@ -1,6 +1,7 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { sendChannelMessage } = require('../_lib/discord');
+const { syncFtoRole } = require('../_lib/roleSync');
 
 // #role-request channel — same one promotions and new officers announce to.
 // https://discord.com/channels/1401963000935485600/1524244391974404126
@@ -20,10 +21,31 @@ module.exports = async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Missing officer id' });
 
   try {
+    // Read the officer's CURRENT FTO value and Discord ID before
+    // overwriting — the role swap below needs to know which role (if
+    // any) to remove, taken from the database rather than trusted from
+    // the browser.
+    const before = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord,fto`, {
+      extraHeaders: { Prefer: 'return=representation' }
+    });
+    const beforeRow = (before && before[0]) || {};
+
     await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: { fto: value || '' },
       extraHeaders: { Prefer: 'return=minimal' }
+    });
+
+    // Grant the matching Discord role for the new FTO status and strip
+    // the old one (e.g. "FTO" -> "Senior FTO", or clearing removes
+    // whatever they held). Never blocks the FTO update if it fails
+    // (missing role, no Discord ID on file, etc).
+    await syncFtoRole({
+      guildId: process.env.DISCORD_GUILD_ID,
+      botToken: process.env.DISCORD_BOT_TOKEN,
+      discordUserId: beforeRow.discord,
+      oldValue: beforeRow.fto,
+      newValue: value || ''
     });
 
     // Announce granting an FTO role in #role-request. Clearing a status
@@ -31,12 +53,8 @@ module.exports = async (req, res) => {
     // the FTO update itself.
     if (value) {
       try {
-        const rows = await sbFetch(`/officers?id=eq.${encodeURIComponent(id)}&select=callsign,unit,discord`, {
-          extraHeaders: { Prefer: 'return=representation' }
-        });
-        const row = (rows && rows[0]) || {};
-        const officerName = row.unit || row.callsign || 'Unknown officer';
-        const mention = isDiscordId(row.discord) ? `<@${row.discord}>` : officerName;
+        const officerName = beforeRow.unit || beforeRow.callsign || 'Unknown officer';
+        const mention = isDiscordId(beforeRow.discord) ? `<@${beforeRow.discord}>` : officerName;
         const content = `${mention} ${officerName} ; FTO Status: ${value}`;
         await sendChannelMessage(ROLE_REQUEST_CHANNEL_ID, process.env.DISCORD_BOT_TOKEN, content);
       } catch (announceErr) {
