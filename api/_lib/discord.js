@@ -1,5 +1,27 @@
 const DISCORD_API = 'https://discord.com/api/v10';
 
+// Wraps fetch() with a couple of retries for NETWORK-level failures only
+// (the TypeError undici throws for connection problems — e.g. "other
+// side closed" — never for an actual HTTP error response from Discord,
+// which fetch() resolves normally with res.ok === false). Serverless
+// functions can go idle between invocations while a pooled keep-alive
+// connection to Discord's edge is silently closed on the far side; the
+// next reuse attempt then fails at the socket level before any request
+// reaches Discord at all. A short retry clears this reliably without
+// masking genuine Discord-side errors, which still come back as normal
+// (non-ok) responses for the caller to handle.
+async function discordFetch(url, options, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (e) {
+      if (attempt === retries) throw e;
+      console.error('discordFetch: network error on attempt ' + (attempt + 1) + ' of ' + (retries + 1) + ', retrying:', e.message || e);
+      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+}
+
 async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri }) {
   const params = new URLSearchParams({
     client_id: clientId,
@@ -8,7 +30,7 @@ async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri 
     code,
     redirect_uri: redirectUri
   });
-  const res = await fetch(`${DISCORD_API}/oauth2/token`, {
+  const res = await discordFetch(`${DISCORD_API}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params
@@ -18,7 +40,7 @@ async function exchangeCodeForToken({ code, clientId, clientSecret, redirectUri 
 }
 
 async function fetchDiscordUser(accessToken) {
-  const res = await fetch(`${DISCORD_API}/users/@me`, {
+  const res = await discordFetch(`${DISCORD_API}/users/@me`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   if (!res.ok) throw new Error('Failed to fetch Discord user: ' + res.status);
@@ -30,7 +52,7 @@ async function fetchDiscordUser(accessToken) {
 // channel the bot can see, and adding/removing/replacing roles on a
 // member the bot outranks, are all plain REST calls.
 async function fetchGuildMember(guildId, userId, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` }
   });
   if (res.status === 404) {
@@ -44,7 +66,7 @@ async function fetchGuildMember(guildId, userId, botToken) {
 }
 
 async function fetchGuildRoles(guildId, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
     headers: { Authorization: `Bot ${botToken}` }
   });
   if (!res.ok) throw new Error('Failed to fetch guild roles: ' + res.status);
@@ -52,7 +74,7 @@ async function fetchGuildRoles(guildId, botToken) {
 }
 
 async function fetchGuildChannels(guildId, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
     headers: { Authorization: `Bot ${botToken}` }
   });
   if (!res.ok) throw new Error('Failed to fetch guild channels: ' + res.status);
@@ -67,7 +89,7 @@ async function findChannelByName(guildId, botToken, name) {
 }
 
 async function sendChannelMessage(channelId, botToken, content) {
-  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+  const res = await discordFetch(`${DISCORD_API}/channels/${channelId}/messages`, {
     method: 'POST',
     headers: {
       Authorization: `Bot ${botToken}`,
@@ -83,7 +105,7 @@ async function sendChannelMessage(channelId, botToken, content) {
 // (embeds, components, etc.), unlike sendChannelMessage above which only
 // ever sends plain text content.
 async function sendChannelPayload(channelId, botToken, payload) {
-  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+  const res = await discordFetch(`${DISCORD_API}/channels/${channelId}/messages`, {
     method: 'POST',
     headers: {
       Authorization: `Bot ${botToken}`,
@@ -102,7 +124,7 @@ async function sendChannelPayload(channelId, botToken, payload) {
 // interaction's own token, not the bot token (Discord's webhook-style
 // auth for interaction follow-ups — no Authorization header needed).
 async function editOriginalInteractionResponse(applicationId, interactionToken, payload) {
-  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
+  const res = await discordFetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -117,7 +139,7 @@ async function editOriginalInteractionResponse(applicationId, interactionToken, 
 // original message itself, e.g. an ephemeral "you can't do that" after
 // deferring an update.
 async function sendInteractionFollowup(applicationId, interactionToken, payload) {
-  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {
+  const res = await discordFetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -133,7 +155,7 @@ async function sendInteractionFollowup(applicationId, interactionToken, payload)
 // caller still needs to add the target user as a thread member (below)
 // for them to actually see it.
 async function createPrivateThread(channelId, botToken, name) {
-  const res = await fetch(`${DISCORD_API}/channels/${channelId}/threads`, {
+  const res = await discordFetch(`${DISCORD_API}/channels/${channelId}/threads`, {
     method: 'POST',
     headers: {
       Authorization: `Bot ${botToken}`,
@@ -146,7 +168,7 @@ async function createPrivateThread(channelId, botToken, name) {
 }
 
 async function addThreadMember(threadId, userId, botToken) {
-  const res = await fetch(`${DISCORD_API}/channels/${threadId}/thread-members/${userId}`, {
+  const res = await discordFetch(`${DISCORD_API}/channels/${threadId}/thread-members/${userId}`, {
     method: 'PUT',
     headers: { Authorization: `Bot ${botToken}` }
   });
@@ -157,7 +179,7 @@ async function addThreadMember(threadId, userId, botToken) {
 // the applicant has acknowledged. Best-effort: callers should catch and
 // log rather than let this block anything else.
 async function archiveThread(threadId, botToken) {
-  const res = await fetch(`${DISCORD_API}/channels/${threadId}`, {
+  const res = await discordFetch(`${DISCORD_API}/channels/${threadId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bot ${botToken}`,
@@ -169,7 +191,7 @@ async function archiveThread(threadId, botToken) {
 }
 
 async function addMemberRole(guildId, userId, roleId, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
     method: 'PUT',
     headers: { Authorization: `Bot ${botToken}` }
   });
@@ -177,7 +199,7 @@ async function addMemberRole(guildId, userId, roleId, botToken) {
 }
 
 async function removeMemberRole(guildId, userId, roleId, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bot ${botToken}` }
   });
@@ -190,7 +212,7 @@ async function removeMemberRole(guildId, userId, roleId, botToken) {
 // Discord will reject the whole request if one is included, not just
 // skip it.
 async function setMemberRoles(guildId, userId, roleIds, botToken) {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
+  const res = await discordFetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bot ${botToken}`,
