@@ -79,6 +79,22 @@ async function sendChannelMessage(channelId, botToken, content) {
   return res.json();
 }
 
+// Generic message send — accepts any valid Discord message payload
+// (embeds, components, etc.), unlike sendChannelMessage above which only
+// ever sends plain text content.
+async function sendChannelPayload(channelId, botToken, payload) {
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to send channel payload: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
 async function addMemberRole(guildId, userId, roleId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
     method: 'PUT',
@@ -115,6 +131,6 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
-  fetchGuildChannels, findChannelByName, sendChannelMessage,
+  fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
   addMemberRole, removeMemberRole, setMemberRoles
 };
