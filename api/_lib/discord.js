@@ -127,6 +127,22 @@ async function sendDirectMessage(userId, botToken, payload) {
   return msgRes.json();
 }
 
+// Edits the message an interaction was originally responding to — used
+// after the interaction was acknowledged with a DEFERRED response (type
+// 6), once the slower work that couldn't fit in Discord's 3-second
+// response window has actually finished. Authenticated by the
+// interaction's own token, not the bot token (Discord's webhook-style
+// auth for interaction follow-ups — no Authorization header needed).
+async function editOriginalInteractionResponse(applicationId, interactionToken, payload) {
+  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to edit original interaction response: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
 async function addMemberRole(guildId, userId, roleId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
     method: 'PUT',
@@ -164,5 +180,5 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
-  sendDirectMessage, addMemberRole, removeMemberRole, setMemberRoles
+  sendDirectMessage, editOriginalInteractionResponse, addMemberRole, removeMemberRole, setMemberRoles
 };
