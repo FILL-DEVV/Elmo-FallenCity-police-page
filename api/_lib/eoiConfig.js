@@ -44,46 +44,39 @@ const CERTIFICATIONS = {
   polair: {
     label: 'PolAir',
     minRankNote: 'Senior Constable +',
-    // The 8 questions supplied are merged into 5 boxes (Discord's popup
-    // form hard limit) — no question was dropped, related pairs just
-    // share one paragraph box. Reviewers see every original question
-    // verbatim as its own field on the review embed regardless of how
-    // the boxes were grouped for the applicant.
     questions: [
       {
         id: 'q1',
-        label: 'Why do you wish to join PolAir? What do you believe are the primary roles of PolAir?',
+        label: 'Why do you wish to join PolAir? What do you believe are the primary roles of PolAir are?',
         modalLabel: 'Why join PolAir & its roles',
         style: 'long',
         required: true
       },
       {
         id: 'q2',
-        label: 'How can aerial support improve police operations? Provide an example of when PolAir should be deployed.',
+        label: 'How can aerial support improve police operations? Provide an example.',
         modalLabel: 'Value of aerial support + example',
         style: 'long',
         required: true
       },
       {
         id: 'q3',
-        label: 'Explain how you would coordinate and communicate with ground units, including Highway Patrol and TOU, during a major incident or pursuit? How would you prioritise requests if multiple units required PolAir assistance at the same time?',
-        modalLabel: 'Coordination & prioritising requests',
-        placeholder: 'Ground-unit coordination during an incident, and prioritising when demand exceeds capacity',
+        label: 'Explain how you would coordinate and communicate with ground units.',
+        modalLabel: 'Coordination with ground units',
         style: 'long',
         required: true
       },
       {
         id: 'q4',
-        label: 'Why is situational awareness important, and how does it contribute to officer and public safety? What experience do you have with aviation, aerial operations, or similar roles (if any)?',
-        modalLabel: 'Situational awareness & experience',
-        placeholder: 'Importance of situational awareness, plus any aviation/aerial experience you have',
+        label: 'Why is situational awareness important, and how does it contribute to officer and public safety?',
+        modalLabel: 'Importance of situational awareness',
         style: 'long',
         required: true
       },
       {
         id: 'q5',
-        label: 'Why should you be selected for PolAir, and is there anything else the command team should know about your application?',
-        modalLabel: 'Why you + anything else',
+        label: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
+        modalLabel: 'Aviation/aerial experience',
         style: 'long',
         required: true
       }
