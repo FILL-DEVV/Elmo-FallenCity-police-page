@@ -7,12 +7,18 @@ const crypto = require('crypto');
 // not raw bytes, so this prefix is what makes that conversion possible.
 const ED25519_DER_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
 
+// rawBody must be the raw request body as a Buffer (not a string decoded
+// chunk-by-chunk — see the caller's getRawBody for why that corrupts
+// multi-byte characters). The signed message is built with Buffer.concat
+// directly on bytes, never via string concatenation, so nothing here
+// re-introduces that problem.
 function verifyDiscordRequest(publicKeyHex, signatureHex, timestamp, rawBody) {
-  if (!publicKeyHex || !signatureHex || !timestamp) {
+  if (!publicKeyHex || !signatureHex || !timestamp || !rawBody) {
     console.error(
       'Signature verification: missing input — publicKey set: ' + !!publicKeyHex +
       ', signature header present: ' + !!signatureHex +
       ', timestamp header present: ' + !!timestamp +
+      ', body present: ' + !!rawBody +
       '. If publicKey is false, DISCORD_PUBLIC_KEY is not set for this deployment/environment.'
     );
     return false;
@@ -31,7 +37,8 @@ function verifyDiscordRequest(publicKeyHex, signatureHex, timestamp, rawBody) {
     }
     const publicKeyDer = Buffer.concat([ED25519_DER_PREFIX, publicKeyBytes]);
     const publicKey = crypto.createPublicKey({ key: publicKeyDer, format: 'der', type: 'spki' });
-    const message = Buffer.from(timestamp + rawBody, 'utf8');
+    const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, 'utf8');
+    const message = Buffer.concat([Buffer.from(timestamp, 'utf8'), bodyBuffer]);
     const signature = Buffer.from(signatureHex, 'hex');
     const ok = crypto.verify(null, message, publicKey, signature);
     if (!ok) console.error('Signature verification: signature did not match — either the wrong public key is set, or the request body was altered in transit.');
