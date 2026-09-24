@@ -1,6 +1,6 @@
 const { verifyDiscordRequest } = require('../_lib/discordVerify');
 const { CERTIFICATIONS } = require('../_lib/eoiConfig');
-const { fetchGuildRoles, addMemberRole, sendChannelPayload, sendDirectMessage, editOriginalInteractionResponse } = require('../_lib/discord');
+const { fetchGuildRoles, addMemberRole, sendChannelPayload, editOriginalInteractionResponse } = require('../_lib/discord');
 const { TIER1_ROLES, INCREMENTAL_SERGEANT_ROLES, DOJ_ROLES } = require('../_lib/permissions');
 
 // Discord interactions must be verified with the raw request body, so
@@ -138,14 +138,14 @@ module.exports = async (req, res) => {
 
       // Ack immediately (a "deferred update" — Discord shows the button
       // click as received right away) BEFORE any of the slow work below.
-      // The role grant, the DM, and the message edit are each a separate
-      // Discord API round trip; done sequentially before responding, as
-      // this used to, their combined latency can exceed Discord's
-      // 3-second interaction response window — when that happens Discord
-      // shows the interaction as failed even though our function keeps
-      // running afterward and the role grant still lands, which is
-      // exactly the "roles work but nothing visibly happens" symptom.
-      // Deferring first avoids that: the actual update happens via the
+      // The role grant and the message edit are each a separate Discord
+      // API round trip; done sequentially before responding, as this
+      // used to, their combined latency can exceed Discord's 3-second
+      // interaction response window — when that happens Discord shows
+      // the interaction as failed even though our function keeps running
+      // afterward and the role grant still lands, which is exactly the
+      // "roles work but nothing visibly happens" symptom. Deferring
+      // first avoids that: the actual update happens via the
       // edit-original-response call at the end instead.
       res.status(200).json({ type: 6 });
 
@@ -164,28 +164,6 @@ module.exports = async (req, res) => {
           }
         } catch (e) {
           console.error('interactions: role grant failed:', e);
-        }
-      }
-
-      // Notify the applicant by DM of the outcome. A one-off
-      // notification, not a conversation — see sendDirectMessage in
-      // _lib/discord.js. Never blocks the review outcome: a closed-DMs
-      // applicant or a blocked bot just means the notification silently
-      // fails.
-      if (applicantId) {
-        try {
-          const certLabel = cert ? cert.label : 'this certification';
-          await sendDirectMessage(applicantId, botToken, {
-            embeds: [{
-              title: certLabel + (action === 'accept' ? ' — Application Accepted' : ' — Application Denied'),
-              description: action === 'accept'
-                ? 'Your application for **' + certLabel + '** has been accepted.'
-                : 'Your application for **' + certLabel + '** has been denied.',
-              color: action === 'accept' ? 0x2f8f5b : 0xe06a5f
-            }]
-          });
-        } catch (e) {
-          console.error('interactions: could not DM applicant about the review outcome:', e);
         }
       }
 
