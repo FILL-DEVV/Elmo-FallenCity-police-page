@@ -111,6 +111,48 @@ async function editOriginalInteractionResponse(applicationId, interactionToken, 
   return res.json();
 }
 
+// Creates a PRIVATE thread under a channel — used to post something only
+// the applicant (and staff able to see private threads) will see, since
+// Discord has no way for a bot to post a truly ephemeral message into a
+// channel outside of replying to that person's own interaction. The
+// caller still needs to add the target user as a thread member (below)
+// for them to actually see it.
+async function createPrivateThread(channelId, botToken, name) {
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/threads`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: name.slice(0, 100), type: 12, invitable: false, auto_archive_duration: 1440 })
+  });
+  if (!res.ok) throw new Error('Failed to create private thread: ' + res.status + ' ' + (await res.text()));
+  return res.json();
+}
+
+async function addThreadMember(threadId, userId, botToken) {
+  const res = await fetch(`${DISCORD_API}/channels/${threadId}/thread-members/${userId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to add thread member: ' + res.status + ' ' + (await res.text()));
+}
+
+// Archives (and locks) a thread once it's served its purpose — e.g. after
+// the applicant has acknowledged. Best-effort: callers should catch and
+// log rather than let this block anything else.
+async function archiveThread(threadId, botToken) {
+  const res = await fetch(`${DISCORD_API}/channels/${threadId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ archived: true, locked: true })
+  });
+  if (!res.ok) throw new Error('Failed to archive thread: ' + res.status + ' ' + (await res.text()));
+}
+
 async function addMemberRole(guildId, userId, roleId, botToken) {
   const res = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
     method: 'PUT',
@@ -148,5 +190,6 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
-  editOriginalInteractionResponse, addMemberRole, removeMemberRole, setMemberRoles
+  editOriginalInteractionResponse, createPrivateThread, addThreadMember, archiveThread,
+  addMemberRole, removeMemberRole, setMemberRoles
 };
