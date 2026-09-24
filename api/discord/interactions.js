@@ -39,7 +39,11 @@ async function isApprover(memberRoleIds, guildId, botToken) {
 }
 
 // Builds the popup application form (a Discord "Modal") for a given
-// certification — up to 5 questions, each its own text box.
+// certification — up to 5 questions, each its own text box. A question
+// can set modalLabel (short version, since Discord caps the visible
+// label at 45 chars) and placeholder (up to 100 chars) to give the
+// applicant more context than the label alone; label itself stays the
+// full original wording, used later on the reviewers' embed.
 function buildModalPayload(certKey, cert) {
   return {
     type: 9,
@@ -51,7 +55,8 @@ function buildModalPayload(certKey, cert) {
         components: [{
           type: 4,
           custom_id: q.id,
-          label: q.label.slice(0, 45),
+          label: (q.modalLabel || q.label).slice(0, 45),
+          placeholder: q.placeholder ? q.placeholder.slice(0, 100) : undefined,
           style: q.style === 'short' ? 1 : 2,
           required: !!q.required,
           max_length: 1000
@@ -134,12 +139,16 @@ module.exports = async (req, res) => {
       const original = interaction.message || {};
       const baseEmbed = (original.embeds && original.embeds[0]) || {};
 
-      if (action === 'accept' && cert && cert.discordRoleName) {
+      if (action === 'accept' && cert && (cert.discordRoleId || cert.discordRoleName)) {
         try {
-          const roles = await fetchGuildRoles(guildId, botToken);
-          const role = roles.find((r) => r.name.toLowerCase() === cert.discordRoleName.toLowerCase());
-          if (role) await addMemberRole(guildId, applicantId, role.id, botToken);
-          else console.error('interactions: no server role named "' + cert.discordRoleName + '"');
+          if (cert.discordRoleId) {
+            await addMemberRole(guildId, applicantId, cert.discordRoleId, botToken);
+          } else {
+            const roles = await fetchGuildRoles(guildId, botToken);
+            const role = roles.find((r) => r.name.toLowerCase() === cert.discordRoleName.toLowerCase());
+            if (role) await addMemberRole(guildId, applicantId, role.id, botToken);
+            else console.error('interactions: no server role named "' + cert.discordRoleName + '"');
+          }
         } catch (e) {
           console.error('interactions: role grant failed:', e);
         }
