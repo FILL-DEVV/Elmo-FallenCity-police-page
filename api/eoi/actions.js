@@ -2,6 +2,7 @@ const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { CERTIFICATIONS, buildPublicCatalogue, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
 const { createPrivateThread, addThreadMember, sendChannelPayload } = require('../_lib/discord');
+const { canReviewApplicationDivision } = require('../_lib/permissions');
 
 // Handles the whole website-based EOI flow in one function (kept
 // together deliberately — Vercel's Hobby plan caps at 12 serverless
@@ -102,6 +103,16 @@ async function handleReview(req, res, session) {
   const cert = CERTIFICATIONS[application.cert_key];
   if (decision === 'accept' && !cert) {
     return res.status(400).json({ error: 'Certification config for this application no longer exists — cannot accept.' });
+  }
+
+  // Mirrors the frontend's per-division Review tab gating — a session
+  // without that division's role (or High Command / DOJ) can't
+  // Accept/Deny this application even by calling this endpoint
+  // directly. Falls back to 'general' when the cert config is missing
+  // (matches certDivision() on the frontend).
+  const division = (cert && cert.division) || 'general';
+  if (!canReviewApplicationDivision(session.perms, division)) {
+    return res.status(403).json({ error: 'You do not have permission to review this division\'s applications' });
   }
 
   await sbFetch(`/eoi_applications?id=eq.${encodeURIComponent(applicationId)}`, {
