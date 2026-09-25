@@ -175,9 +175,8 @@ async function addThreadMember(threadId, userId, botToken) {
   if (!res.ok) throw new Error('Failed to add thread member: ' + res.status + ' ' + (await res.text()));
 }
 
-// Archives (and locks) a thread once it's served its purpose — e.g. after
-// the applicant has acknowledged. Best-effort: callers should catch and
-// log rather than let this block anything else.
+// Archives (and locks) a thread — kept for any future use, though the
+// EOI acknowledge flow now deletes the thread outright instead (below).
 async function archiveThread(threadId, botToken) {
   const res = await discordFetch(`${DISCORD_API}/channels/${threadId}`, {
     method: 'PATCH',
@@ -188,6 +187,18 @@ async function archiveThread(threadId, botToken) {
     body: JSON.stringify({ archived: true, locked: true })
   });
   if (!res.ok) throw new Error('Failed to archive thread: ' + res.status + ' ' + (await res.text()));
+}
+
+// Deletes a channel or thread outright (not just archiving it) — used to
+// remove the private EOI acknowledgement thread once the applicant has
+// acknowledged, since it's served its purpose and there's nothing in it
+// worth keeping around.
+async function deleteThread(threadId, botToken) {
+  const res = await discordFetch(`${DISCORD_API}/channels/${threadId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to delete thread: ' + res.status + ' ' + (await res.text()));
 }
 
 async function addMemberRole(guildId, userId, roleId, botToken) {
@@ -227,6 +238,6 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
   fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
-  editOriginalInteractionResponse, sendInteractionFollowup, createPrivateThread, addThreadMember, archiveThread,
+  editOriginalInteractionResponse, sendInteractionFollowup, createPrivateThread, addThreadMember, archiveThread, deleteThread,
   addMemberRole, removeMemberRole, setMemberRoles
 };
