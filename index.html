@@ -870,6 +870,8 @@
 
     const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
     if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
+    const eoiTab = document.querySelector('.sheettab[data-sheet="sheet-eoi"]');
+    if(eoiTab) eoiTab.style.display = p.canViewEoi ? '' : 'none';
     const seniorCommandTab = document.querySelector('.sheettab[data-sheet="sheet-seniorcommand"]');
     if(seniorCommandTab) seniorCommandTab.style.display = p.canViewSeniorCommand ? '' : 'none';
     const activeTab = document.querySelector('.sheettab.active');
