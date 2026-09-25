@@ -1,0 +1,26 @@
+# `fly launch` will ask you to confirm/rename the app name and region
+# below — this file is a starting point, not final. The important
+# settings to keep as-is are under [http_service]: this bot must stay
+# running continuously to hold its Discord Gateway connection, so
+# scale-to-zero (Fly's default for idle HTTP services, same problem as
+# Render's free-tier sleep) is explicitly disabled here.
+
+app = "fallenpd-dm-bot"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

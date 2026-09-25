@@ -32,21 +32,37 @@ bot never populates. This process fixes that by actually connecting.
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. **Deploy this folder** to an always-on host. Railway or Render both
-   have small free/cheap tiers that work well for this:
+3. **Deploy this folder to Fly.io** (free — their free allowance covers
+   one small always-on VM, unlike Render's free tier which sleeps after
+   15 minutes idle, or Railway which dropped free tier entirely):
 
-   **Railway:**
-   - New Project → Deploy from GitHub repo → pick this repo
-   - Set the **Root Directory** to `dm-bot`
-   - Add environment variables: `DISCORD_BOT_TOKEN` (same value as in
-     Vercel), `API_SECRET` (from step 2)
-   - Railway auto-detects `npm start` and deploys
+   - Install the CLI: https://fly.io/docs/flyctl/install/
+   - Sign up / log in: `fly auth login`
+   - From inside the `dm-bot` folder, run `fly launch` — it detects the
+     `Dockerfile` and `fly.toml` already here, and will ask you to
+     confirm or change the app name and region. **Say no** if it asks
+     whether to set up a Postgres/Redis database — this doesn't need
+     one. **Say no** if it asks to deploy immediately — set secrets
+     first (next step).
+   - Set the two secrets (these become env vars in the container):
+     ```
+     fly secrets set DISCORD_BOT_TOKEN=<same value as in Vercel>
+     fly secrets set API_SECRET=<the value from step 2>
+     ```
+   - Deploy: `fly deploy`
+   - Fly.io gives you a URL like `https://fallenpd-dm-bot.fly.dev`
 
-   **Render:**
-   - New → Web Service → connect this repo
-   - Root Directory: `dm-bot`
-   - Build command: `npm install`, Start command: `npm start`
-   - Add the same two environment variables
+   `fly.toml` already disables scale-to-zero (`auto_stop_machines =
+   false`, `min_machines_running = 1`) — without that, Fly would also
+   spin the machine down when idle and kill the Gateway connection,
+   same problem as Render's free tier.
+
+   **Paid alternative — Render:** if you'd rather not deal with Docker,
+   Render's simpler git-push flow works too, just on their Starter tier
+   (~$7/month) rather than free (Free tier sleeps after 15 minutes
+   idle, which kills the Gateway connection): New → Web Service →
+   connect this repo → Root Directory `dm-bot` → Build command
+   `npm install` → Start command `npm start` → same two env vars.
 
 4. **Check it's alive** — visit `https://<your-deployed-url>/health`,
    should return `{"ok":true,"discordReady":true}`. If `discordReady`
@@ -55,7 +71,7 @@ bot never populates. This process fixes that by actually connecting.
 
 5. **Add two env vars to the Vercel project** (not this one):
    - `DM_BOT_URL` — the deployed URL from step 3, e.g.
-     `https://fallenpd-dm-bot.up.railway.app`
+     `https://fallenpd-dm-bot.fly.dev`
    - `DM_BOT_SECRET` — the same value as `API_SECRET` from step 2
 
 ## Calling it from the Vercel app
