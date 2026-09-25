@@ -55,6 +55,20 @@ async function handleApply(req, res, session) {
     extraHeaders: { Prefer: 'return=minimal' }
   });
 
+  // Optional — only certs with both fields set (currently just SFC)
+  // ping anyone on submit. Never blocks the application from being
+  // saved if this fails.
+  if (cert.notifyChannelId && cert.notifyRoleId) {
+    try {
+      const link = 'https://www.fallenpd.com/?eoiApp=' + encodeURIComponent(row.id);
+      await sendChannelPayload(cert.notifyChannelId, process.env.DISCORD_BOT_TOKEN, {
+        content: `<@&${cert.notifyRoleId}> New **${cert.label}** application from ${session.username} — ${link}`
+      });
+    } catch (e) {
+      console.error('eoi apply: could not post submission notification:', e);
+    }
+  }
+
   res.status(200).json({ ok: true });
 }
 
