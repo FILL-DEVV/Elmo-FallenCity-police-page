@@ -648,9 +648,14 @@
     "Leading Senior Constable","Incremental Senior Constable","Senior Constable",
     "Constable","Probationary Constable","student"
   ];
-  const RANKS = [...EXEC_RANKS, ...NON_EXEC_RANKS];
+  const RANKS = [...EXEC_RANKS, ...NON_EXEC_RANKS.flatMap(r => r === 'GD supervisor' ? [r, 'Sergeant'] : [r])];
   const SENIOR_COMMAND_RANKS = [...EXEC_RANKS, "Inspector", "Senior Sergeant"];
   const GD_RANKS = NON_EXEC_RANKS;
+  // Highway Patrol keeps the standard non-exec ladder but uses "Sergeant"
+  // for that tier instead of General Duties' "GD supervisor" rename —
+  // same rank, different label, so it's a distinct array rather than a
+  // shared reference with GD_RANKS.
+  const HIGHWAY_RANKS = NON_EXEC_RANKS.map(r => r === 'GD supervisor' ? 'Sergeant' : r);
   const SHARED_LADDER_PREFIX = NON_EXEC_RANKS.slice(0, NON_EXEC_RANKS.indexOf("Incremental Sergeant") + 1);
   const CIU_RANKS = [
     ...SHARED_LADDER_PREFIX,
@@ -663,7 +668,7 @@
   const RANK_ORDER_LIST = [
     ...EXEC_RANKS,
     ...SHARED_LADDER_PREFIX,
-    "GD supervisor","Detective Supervisor","TOU Supervisor",
+    "GD supervisor","Sergeant","Detective Supervisor","TOU Supervisor",
     "Leading Senior Constable","Lead Detective","Lead Operator",
     "Incremental Senior Constable","Senior Detective","Senior Operator",
     "Senior Constable","Detective","Operator",
@@ -676,7 +681,7 @@
   const RANK_TIER_RED = new Set(['Chief Superintendent','Superintendent','Chief Inspector']);
   const RANK_TIER_YELLOW = new Set(['Inspector']);
   const RANK_TIER_SERGEANT_SENIOR = new Set(['Senior Sergeant']);
-  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','GD supervisor','Detective Supervisor','TOU Supervisor']);
+  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','GD supervisor','Sergeant','Detective Supervisor','TOU Supervisor']);
   const RANK_TIER_CONSTABLE = new Set([
     'Leading Senior Constable','Incremental Senior Constable','Senior Constable',
     'Lead Detective','Senior Detective','Detective',
@@ -726,11 +731,18 @@
       leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
       constable: 600, probationaryConstable: 700, student: 800
     }),
-    highway: divisionCodes("TRF", {
-      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
-      leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
-      constable: 600
-    }),
+    // Highway's Sergeant tier uses the same TRF-301 callsign block that
+    // divisionCodes() would generate under "GD supervisor" — just filed
+    // under the rank name Highway actually uses.
+    highway: (() => {
+      const codes = divisionCodes("TRF", {
+        inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
+        leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
+        constable: 600
+      });
+      const { "GD supervisor": sergeantCode, ...rest } = codes;
+      return { ...rest, "Sergeant": sergeantCode };
+    })(),
     tou: {
       ...EXEC_CODES,
       "Inspector": { prefix: "TOU", base: 100 },
@@ -767,8 +779,8 @@
     },
     highway: {
       label: "Highway patrol",
-      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder, with the Sergeant tier renamed to GD supervisor, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
-      ranks: GD_RANKS
+      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder — including its own Sergeant rank (General Duties uses \"GD supervisor\" for the same tier) — then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
+      ranks: HIGHWAY_RANKS
     },
     tou: {
       label: "Tactical Operations Unit",
