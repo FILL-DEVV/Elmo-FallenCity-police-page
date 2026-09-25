@@ -51,11 +51,9 @@ const CERTIFICATIONS = {
   polair: {
     label: 'PolAir',
     minRankNote: 'Senior Constable +',
-    // Best-guess assignment — PolAir isn't a division cert like the
-    // Highway/TOU/CIU tiers, so this is filed under Highway Patrol
-    // since it most often supports Highway's ground pursuits. Change
-    // this if PolAir sits elsewhere in your command structure.
-    division: 'highway',
+    // Filed under Senior command — PolAir applications are reviewed
+    // there rather than under any single division.
+    division: 'srcmd',
     questions: [
       {
         id: 'q1',
