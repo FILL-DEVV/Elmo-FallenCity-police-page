@@ -7,6 +7,7 @@ module.exports = (req, res) => {
   }
   res.status(200).json({
     loggedIn: true,
+    id: session.id,
     username: session.username,
     avatar: session.avatar,
     roleNames: session.roleNames,
