@@ -68,6 +68,7 @@ module.exports = async (req, res) => {
 
     if (customId.startsWith('eoi:ack:')) {
       const applicationId = customId.slice('eoi:ack:'.length);
+      console.log('interactions: ack received for application ' + applicationId);
 
       // Ack immediately (deferred update), before the Supabase lookup
       // below — that lookup is a network round trip, and running it
@@ -75,6 +76,7 @@ module.exports = async (req, res) => {
       // 3-second window" problem this app hit before with the
       // Accept/Deny buttons.
       res.status(200).json({ type: 6 });
+      console.log('interactions: deferred response sent for ' + applicationId);
 
       let application;
       try {
@@ -82,6 +84,7 @@ module.exports = async (req, res) => {
           extraHeaders: { Prefer: 'return=representation' }
         });
         application = rows && rows[0];
+        console.log('interactions: lookup for ' + applicationId + ' returned ' + (application ? 'a row (cert_key=' + application.cert_key + ')' : 'no row'));
       } catch (e) {
         console.error('interactions: could not look up application ' + applicationId + ':', e);
         return;
@@ -103,8 +106,10 @@ module.exports = async (req, res) => {
       }
 
       const cert = CERTIFICATIONS[application.cert_key];
+      console.log('interactions: granting role for cert_key=' + application.cert_key + ' — config found: ' + !!cert + ', discordRoleId=' + (cert && cert.discordRoleId) + ', discordRoleName=' + (cert && cert.discordRoleName));
       try {
         await grantCertRole(cert, application.applicant_id, guildId, botToken);
+        console.log('interactions: role grant call completed without throwing for ' + applicationId);
       } catch (e) {
         console.error('interactions: role grant on acknowledge failed:', e);
       }
@@ -115,6 +120,7 @@ module.exports = async (req, res) => {
           body: { acknowledged_at: Date.now() },
           extraHeaders: { Prefer: 'return=minimal' }
         });
+        console.log('interactions: acknowledged_at recorded for ' + applicationId);
       } catch (e) {
         console.error('interactions: could not record acknowledged_at:', e);
       }
@@ -123,9 +129,11 @@ module.exports = async (req, res) => {
       // edited or sent first, since there'd be nothing left to see it.
       try {
         await deleteThread(interaction.channel_id, botToken);
+        console.log('interactions: thread deleted for ' + applicationId);
       } catch (e) {
         console.error('interactions: could not delete acknowledgement thread:', e);
       }
+      console.log('interactions: ack flow fully completed for ' + applicationId);
       return;
     }
 
