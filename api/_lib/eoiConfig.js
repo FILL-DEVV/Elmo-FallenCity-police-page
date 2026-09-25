@@ -17,6 +17,11 @@
 // - minRankNote: shown next to the label on the website, e.g.
 //   "Constable +". Display only — not currently checked against the
 //   applicant's actual rank.
+// - division: which Review-tab this cert's pending applications sort
+//   under on the website — one of 'general' (GD), 'highway', 'tou',
+//   'crime' (CIU), or 'srcmd' (Senior command). Defaults to 'general'
+//   if omitted. Display/sorting only — never checked against the
+//   applicant's actual division.
 // - questions: each becomes one text box on the website's application
 //   form. style "short" is a single line, "long" is a paragraph box.
 // - discordRoleName: exact Discord role name granted automatically when
@@ -35,6 +40,7 @@ const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
     minRankNote: '(placeholder — for testing the flow)',
+    division: 'general',
     questions: [
       { id: 'q1', label: 'Why are you interested in this certification?', style: 'long', required: true },
       { id: 'q2', label: 'Relevant experience?', style: 'long', required: true },
@@ -45,6 +51,11 @@ const CERTIFICATIONS = {
   polair: {
     label: 'PolAir',
     minRankNote: 'Senior Constable +',
+    // Best-guess assignment — PolAir isn't a division cert like the
+    // Highway/TOU/CIU tiers, so this is filed under Highway Patrol
+    // since it most often supports Highway's ground pursuits. Change
+    // this if PolAir sits elsewhere in your command structure.
+    division: 'highway',
     questions: [
       {
         id: 'q1',
@@ -82,6 +93,9 @@ const CERTIFICATIONS = {
   sfc: {
     label: 'SFC',
     minRankNote: 'Senior Constable +',
+    // Filed under TOU — its notifyRoleId below is the same role ID
+    // used as TOU's senior-tier leadership role in roleSync.js.
+    division: 'tou',
     questions: [
       {
         id: 'q1',
@@ -134,6 +148,7 @@ function buildPublicCatalogue() {
     key,
     label: cert.label,
     minRankNote: cert.minRankNote || '',
+    division: cert.division || 'general',
     questions: cert.questions.map((q) => ({
       id: q.id,
       label: q.label,
