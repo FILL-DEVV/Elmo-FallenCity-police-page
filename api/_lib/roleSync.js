@@ -24,9 +24,9 @@ const NEVER_REMOVE_ROLES = new Set(['general duties']);
 
 // Full rank ladder, most senior first — same order as the app's RANKS
 // list — used to work out "Incremental Sergeant and above". "Sergeant"
-// is kept here as a historical rung even though no division's rank is
-// literally named that anymore (general/highway renamed it to "GD
-// supervisor"); it's inert but harmless to leave in the ladder.
+// now IS a real, live rank name — Highway Patrol's Sergeant tier (the
+// same tier General Duties calls "GD supervisor") — so its Discord role
+// gets swapped normally like every other rank here.
 const RANK_LADDER = [
   'Commissioner', 'Deputy Commissioner', 'Assistant Commissioner',
   'Chief Superintendent', 'Superintendent', 'Chief Inspector',
@@ -68,9 +68,11 @@ const RANK_SPECIFIC_ROLE_IDS = {
     'GD supervisor': [],
     'Incremental Senior Constable': ['1545713949373243403']
   },
+  // Highway calls this tier "Sergeant" (not "GD supervisor", General
+  // Duties' name for the same tier) — see index.html's HIGHWAY_RANKS.
   highway: {
     'Incremental Sergeant': ['1545715001736695838'],
-    'GD supervisor': ['1470364089338429450'],
+    'Sergeant': ['1470364089338429450', '1525134667714400276'],
     'Incremental Senior Constable': ['1545713949373243403']
   },
   crime: {
