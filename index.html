@@ -2467,6 +2467,9 @@
     const params = new URLSearchParams(window.location.search);
     const appId = params.get('eoiApp');
     if(!appId) return;
+    // Mirrors the sidebar tab's own gating — a deep link shouldn't be
+    // able to open a sheet the person can't otherwise navigate to.
+    if(!(currentUser.perms || {}).canViewEoi) return;
     pendingDeepLinkAppId = appId;
     activateSheet('sheet-eoi');
     const reviewTabBtn = document.getElementById('eoi-review-tab-btn');
