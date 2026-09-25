@@ -8,15 +8,2491 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ---------- Nightwatch theme ---------- */
   :root{
-    --grid:#232838; --grid-strong:#2d3448; --headbg:#0d1017; --corner:#10141d;
-    --cell:#12151d; --cell-alt:#161b26; --entry-bg:#171c28; --entry-border:#d99a1f;
-    --ink:#e7e9ee; --sub:#8a93a6; --navy:#10141d; --amber:#d99a1f; --amber-deep:#f0b840;
-    --alert:#e06a5f; --white:#0d1017; --tabbg:#0d1017; --tabactive:#1c2333;
+    --grid:#232838;
+    --grid-strong:#2d3448;
+    --headbg:#0d1017;
+    --corner:#10141d;
+    --cell:#12151d;
+    --cell-alt:#161b26;
+    --entry-bg:#171c28;
+    --entry-border:#d99a1f;
+    --ink:#e7e9ee;
+    --sub:#8a93a6;
+    --navy:#10141d;
+    --amber:#d99a1f;
+    --amber-deep:#f0b840;
+    --alert:#e06a5f;
+    --white:#0d1017;
+    --tabbg:#0d1017;
+    --tabactive:#1c2333;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--headbg);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    font-size:0.85rem;
+  }
+  .app-shell{display:flex; min-height:100vh;}
+  .main-col{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .titlebar{
+    background:var(--headbg);
+    color:var(--ink);
+    padding:14px 26px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    border-bottom:1px solid var(--grid);
+  }
+  .titlebar .dot{display:none;}
+  .titlebar .fname{font-weight:700; letter-spacing:0.01em; font-size:1rem;}
+  .titlebar .fsub{
+    color:var(--sub);
+    font-size:0.72rem;
+    font-family:'IBM Plex Mono', monospace;
+    background:var(--entry-bg);
+    border:1px solid var(--grid);
+    padding:5px 11px;
+    border-radius:20px;
+    margin-left:auto;
+  }
+  #auth-status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    color:var(--sub);
+    background:var(--entry-bg);
+    border:1px solid var(--grid);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+  #login-btn{border-radius:6px;}
+  #logout-btn{border-radius:6px; font-family:'IBM Plex Mono', monospace;}
+  .formulabar{
+    display:flex;
+    align-items:center;
+    border-bottom:1px solid var(--grid);
+    background:var(--headbg);
+    padding:12px 26px;
+    gap:0;
+  }
+  .cellref, .fx{display:none;}
+  .formulabar input{
+    flex:1;
+    max-width:440px;
+    border:1px solid var(--grid);
+    background:var(--entry-bg);
+    border-radius:8px;
+    padding:9px 14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.82rem;
+    color:var(--ink);
+  }
+  .formulabar input:focus{outline:none; border-color:var(--amber);}
+  .formulabar input::placeholder{color:var(--sub);}
+  .search-dropdown{
+    position:absolute;
+    top:100%;
+    left:26px;
+    width:440px;
+    background:var(--cell);
+    border:1px solid var(--grid);
+    border-top:none;
+    max-height:340px;
+    overflow-y:auto;
+    z-index:30;
+    display:none;
+    box-shadow:0 12px 24px rgba(0,0,0,0.45);
+    border-radius:0 0 8px 8px;
+  }
+  .search-dropdown.open{display:block;}
+  .search-dropdown-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:10px;
+    padding:10px 14px;
+    cursor:pointer;
+    border-bottom:1px solid var(--grid);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .search-dropdown-item:last-child{border-bottom:none;}
+  .search-dropdown-item:hover{background:var(--cell-alt);}
+  .search-dropdown-item .sdi-name{font-weight:700; color:var(--ink); font-size:0.82rem;}
+  .search-dropdown-item .sdi-meta{color:var(--sub); font-size:0.7rem; white-space:nowrap;}
+  .search-dropdown-empty{padding:14px; color:var(--sub); font-size:0.78rem; text-align:center;}
+  tr.data-row.row-flash td{background:var(--amber) !important; color:var(--navy) !important;}
+  .wrap{max-width:none; margin:0; padding:20px 26px 40px;}
+  .sheet{display:none;}
+  .sheet.active{display:block;}
+  .toolbar-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 0 0;
+    background:transparent;
+    border-bottom:none;
+    flex-wrap:wrap;
+  }
+  .toolbar-row .spacer{flex:1;}
+  .btn{
+    border:1px solid var(--grid-strong);
+    background:var(--entry-bg);
+    color:#c7ccd4;
+    padding:7px 14px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:0.75rem;
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .btn:hover{background:var(--cell-alt); border-color:var(--amber);}
+  .btn.primary{background:var(--amber); color:var(--navy); border-color:var(--amber); font-weight:700;}
+  .btn.primary:hover{background:var(--amber-deep);}
+  .btn.danger{background:transparent; color:var(--alert); border-color:#3a1f22; padding:5px 9px; font-size:0.68rem; border-radius:6px;}
+  .btn.danger:hover{background:var(--alert); color:#10141d;}
+  .pill{font-size:0.72rem; color:var(--sub); padding:6px 4px; font-family:'IBM Plex Mono', monospace;}
+  .grid-scroll{
+    width:100%;
+    overflow-x:auto;
+    margin-top:16px;
+    background:var(--cell);
+    border:1px solid var(--grid);
+    border-radius:12px;
+  }
+  table.grid{width:auto; min-width:100%; border-collapse:collapse; table-layout:fixed;}
+  table.grid th, table.grid td{border:none; border-bottom:1px solid var(--grid); padding:0; vertical-align:middle; text-align:center;}
+  th.colhead{background:transparent; padding:12px 14px; text-align:center; position:relative; border-bottom:1px solid var(--grid-strong) !important;}
+  th.colhead .letter{display:none;}
+  th.colhead .fieldname{display:flex; align-items:center; justify-content:center; gap:5px; font-size:0.66rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--sub);}
+  th.colhead .filter-btn{border:none; background:transparent; color:var(--sub); cursor:pointer; font-size:0.7rem; padding:0 2px;}
+  th.colhead .filter-btn:hover{color:var(--amber);}
+  th.colhead .filter-btn.active-filter{color:var(--amber); font-weight:700;}
+  .filter-pop{
+    position:absolute;
+    top:100%;
+    left:0;
+    z-index:20;
+    background:var(--cell);
+    border:1px solid var(--grid-strong);
+    box-shadow:0 10px 22px rgba(0,0,0,0.4);
+    min-width:190px;
+    max-height:220px;
+    overflow-y:auto;
+    display:none;
+    border-radius:8px;
+    margin-top:6px;
+  }
+  .filter-pop.open{display:block;}
+  .filter-pop button{display:block; width:100%; text-align:left; border:none; background:transparent; padding:8px 12px; font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink); cursor:pointer;}
+  .filter-pop button:hover{background:var(--cell-alt);}
+  .filter-pop button.sel{color:var(--amber); font-weight:700;}
+  .fto-pop{
+    position:fixed;
+    top:auto; left:auto;
+    display:none;
+    z-index:50;
+    background:var(--cell);
+    border:1px solid var(--grid-strong);
+    box-shadow:0 14px 30px rgba(0,0,0,0.5);
+    min-width:200px;
+    max-height:280px;
+    overflow-y:auto;
+    border-radius:10px;
+  }
+  .fto-pop.open{display:block;}
+  .fto-pop button{display:block; width:100%; text-align:left; border:none; background:transparent; padding:9px 14px; font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink); cursor:pointer;}
+  .fto-pop button:hover{background:var(--cell-alt);}
+  .fto-pop button.sel{color:var(--amber); font-weight:700;}
+  .quickadd{background:var(--entry-bg); border:1px solid var(--amber); border-left:1px solid var(--amber); border-radius:12px; padding:16px 20px; margin:16px 0 0;}
+  .quickadd.hide-entry-row{display:none;}
+  .quickadd-title{display:flex; align-items:center; gap:6px; font-family:'Space Grotesk', sans-serif; font-size:0.68rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--amber-deep); margin-bottom:12px;}
+  .quickadd-fields{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;}
+  .quickadd .qcell{min-width:0;}
+  .quickadd label{display:block; font-size:0.6rem; color:var(--sub); font-weight:700; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;}
+  .quickadd input, .quickadd select{
+    width:100%;
+    min-width:0;
+    box-sizing:border-box;
+    border:1px solid var(--grid-strong);
+    background:var(--headbg);
+    border-radius:6px;
+    padding:9px 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.85rem;
+    color:var(--ink);
+    text-align:left;
+  }
+  .quickadd input:focus, .quickadd select:focus{outline:none; border-color:var(--amber); box-shadow:0 0 0 2px rgba(217,154,31,0.18);}
+  .quickadd-add-row{display:flex; justify-content:flex-end; margin-top:14px;}
+  .quickadd-add-row .btn.primary{padding:10px 26px; font-size:0.82rem; border-radius:7px;}
+  @media (max-width:720px){
+    .quickadd-fields{grid-template-columns:repeat(2, 1fr);}
+    .quickadd-add-row{justify-content:stretch;}
+    .quickadd-add-row .btn.primary{width:100%;}
+  }
+  tr.data-row td{background:transparent; padding:13px 14px; font-size:0.82rem; line-height:1.4; word-break:break-word; text-align:center;}
+  tr.data-row:nth-child(even) td{background:var(--cell-alt);}
+  tr.data-row td.cell-callsign{font-weight:700; color:var(--amber); font-family:'IBM Plex Mono', monospace;}
+  tr.data-row td.cell-time{white-space:nowrap; color:var(--sub); font-size:0.78rem;}
+  tr.data-row td.cell-promo{white-space:nowrap; overflow-x:auto; color:var(--sub); font-size:0.78rem;}
+  tr.data-row td.cell-promo .cell-promo-text{white-space:nowrap;}
+  tr.data-row td.cell-discord{font-family:'IBM Plex Mono', monospace; color:var(--sub); font-size:0.76rem;}
+  tr.data-row td.cell-unit{font-size:0.82rem;}
+  tr.data-row td.cell-actions{display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:nowrap;}
+  tr.data-row td.cell-time .cell-time-text{white-space:nowrap;}
+  td.editable-cell{cursor:pointer;}
+  td.editable-cell:hover{outline:1px dashed var(--amber); outline-offset:-2px;}
+  .rank-badge{display:inline-block; border-radius:5px; padding:3px 9px; font-size:0.7rem; font-weight:600; font-family:'Space Grotesk', sans-serif; border:1px solid transparent; white-space:nowrap;}
+  .rank-badge.tier-exec{background:rgba(217,154,31,0.16); color:var(--amber-deep); border-color:rgba(217,154,31,0.4);}
+  .rank-badge.tier-white{background:rgba(246,248,251,0.14); color:#f6f8fb; border-color:rgba(246,248,251,0.35);}
+  .rank-badge.tier-red{background:rgba(255,64,64,0.14); color:#ff6b5e; border-color:rgba(255,64,64,0.4);}
+  .rank-badge.tier-yellow{background:rgba(251,228,47,0.16); color:#fbe42f; border-color:rgba(251,228,47,0.4);}
+  .rank-badge.tier-sergeant-senior{background:rgba(64,215,240,0.16); color:#40d7f0; border-color:rgba(64,215,240,0.4);}
+  .rank-badge.tier-sergeant{background:rgba(74,124,232,0.14); color:#7fa2f0; border-color:rgba(74,124,232,0.35);}
+  .rank-badge.tier-constable{background:rgba(93,196,140,0.14); color:#7fd6a5; border-color:rgba(93,196,140,0.35);}
+  .rank-badge.tier-other{background:rgba(148,163,184,0.14); color:#b6bfcf; border-color:rgba(148,163,184,0.3);}
+  .row-promote{border:1px solid var(--grid-strong); background:var(--headbg); color:var(--amber); cursor:pointer; font-size:0.72rem; font-weight:700; line-height:1; padding:6px 9px; border-radius:6px; flex-shrink:0; font-family:'Space Grotesk', sans-serif;}
+  .row-promote:hover{background:var(--amber); border-color:var(--amber-deep); color:var(--navy);}
+  .row-terminate{border:1px solid #3a1f22; background:var(--headbg); color:var(--alert); cursor:pointer; font-size:0.72rem; font-weight:700; line-height:1; padding:6px 9px; border-radius:6px; flex-shrink:0; font-family:'Space Grotesk', sans-serif;}
+  .row-terminate:hover{background:var(--alert); border-color:var(--alert); color:var(--navy);}
+  .row-fto{border:1px solid var(--grid-strong); background:var(--headbg); color:var(--sub); cursor:pointer; font-size:0.64rem; font-weight:700; line-height:1; padding:6px 8px; border-radius:6px; flex-shrink:0; font-family:'Space Grotesk', sans-serif; letter-spacing:0.02em;}
+  .row-fto:hover{background:var(--cell-alt); border-color:var(--amber); color:var(--amber);}
+  .promote-pop{position:fixed; display:none; z-index:50; background:var(--cell); border:1px solid var(--grid-strong); box-shadow:0 14px 30px rgba(0,0,0,0.5); padding:14px; width:240px; border-radius:10px; font-family:'Space Grotesk', sans-serif;}
+  .promote-pop.open{display:block;}
+  .promote-pop-head{font-size:0.72rem; font-weight:700; color:var(--amber-deep); margin-bottom:8px; letter-spacing:0.02em;}
+  .promote-pop label{display:block; font-size:0.65rem; color:var(--sub); font-weight:600; margin:8px 0 3px;}
+  .promote-pop select{width:100%; border:1px solid var(--grid-strong); background:var(--headbg); color:var(--ink); padding:7px 8px; font-family:'IBM Plex Mono', monospace; font-size:0.78rem; border-radius:6px;}
+  .promote-pop-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:12px;}
+  .promote-pop-actions .btn{padding:6px 12px; font-size:0.72rem;}
+  .checklist-overlay{position:fixed; inset:0; background:rgba(3,5,9,0.7); display:none; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .checklist-overlay.open{display:flex;}
+  .checklist-modal{background:var(--cell); border:1px solid var(--grid-strong); border-top:4px solid var(--amber); box-shadow:0 22px 60px rgba(0,0,0,0.6); width:440px; max-width:100%; max-height:85vh; overflow-y:auto; padding:0; border-radius:12px; font-family:'Space Grotesk', sans-serif;}
+  .checklist-modal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:18px 20px 12px;}
+  .checklist-modal-title{font-family:'Space Grotesk', sans-serif; font-size:1.05rem; font-weight:700; color:var(--amber-deep); letter-spacing:0.02em;}
+  .checklist-modal-sub{font-family:'IBM Plex Mono', monospace; font-size:0.72rem; color:var(--sub); margin-top:3px;}
+  .checklist-x{border:none; background:transparent; color:var(--sub); font-size:1.4rem; line-height:1; cursor:pointer; padding:0 4px;}
+  .checklist-x:hover{color:var(--alert);}
+  .checklist-bar-track{height:6px; border-radius:3px; background:var(--grid); margin:0 20px; border:none; overflow:hidden;}
+  .checklist-bar-fill{height:100%; width:0%; background:var(--amber); transition:width 0.25s ease, background 0.25s ease;}
+  .checklist-bar-fill.complete{background:#2f8f5b;}
+  .checklist-progress{font-family:'IBM Plex Mono', monospace; font-size:0.7rem; font-weight:600; color:var(--sub); padding:8px 20px 14px;}
+  .checklist-list{padding:0 14px 16px;}
+  .checklist-item{display:flex; align-items:center; gap:12px; padding:12px 10px; margin-bottom:6px; background:var(--cell-alt); border:1px solid var(--grid); border-radius:8px; font-size:0.9rem; line-height:1.35; color:var(--ink); cursor:pointer; transition:background 0.15s ease, border-color 0.15s ease;}
+  .checklist-item:hover{border-color:var(--grid-strong);}
+  .checklist-check{flex-shrink:0; width:22px; height:22px; border:2px solid var(--grid-strong); background:var(--headbg); border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; color:transparent;}
+  .checklist-item input{position:absolute; opacity:0; width:0; height:0;}
+  .checklist-item.done{background:rgba(47,143,91,0.12); border-color:#2f8f5b;}
+  .checklist-item.done .checklist-check{background:#2f8f5b; border-color:#2f8f5b; color:#fff;}
+  .checklist-item.done span.item-label{color:var(--sub); text-decoration:line-through;}
+  .row-checklist{border:1px solid var(--grid-strong); background:var(--headbg); color:var(--amber); cursor:pointer; font-size:0.7rem; font-weight:700; line-height:1; padding:6px 10px; border-radius:6px; font-family:'IBM Plex Mono', monospace;}
+  .row-checklist:hover{background:var(--cell-alt);}
+  .row-checklist.complete{border-color:#2f8f5b; color:#7fd6a5;}
+  .confirm-overlay{position:fixed; inset:0; background:rgba(3,5,9,0.6); display:none; align-items:center; justify-content:center; z-index:100;}
+  .confirm-overlay.open{display:flex;}
+  .confirm-modal{background:var(--cell); border:1px solid var(--grid-strong); box-shadow:0 18px 40px rgba(0,0,0,0.55); padding:20px; width:320px; max-width:90vw; border-radius:12px; font-family:'Space Grotesk', sans-serif;}
+  .confirm-modal-msg{font-size:0.85rem; color:var(--ink); line-height:1.5; margin-bottom:16px;}
+  .confirm-modal-actions{display:flex; justify-content:flex-end; gap:8px;}
+  .confirm-modal-actions .btn{padding:7px 14px; font-size:0.76rem;}
+  tr.empty-row td{text-align:center; color:var(--sub); font-style:italic; padding:26px 10px; background:transparent;}
+  th.col-callsign, td.cell-callsign{width:100px;}
+  th.col-rank, td.cell-rank{width:170px;}
+  th.col-unit, td.cell-unit{width:160px;}
+  th.col-discord, td.cell-discord{width:170px;}
+  th.col-promo, td.cell-promo{width:190px;}
+  th.col-time, td.cell-time{width:120px;}
+  th.col-fto, td.cell-fto{width:130px;}
+  th.col-actions, td.cell-actions{width:130px;}
+  th.col-checklist, td.cell-checklist{width:110px;}
+  th.col-notes, td.cell-notes{width:150px;}
+  #sheet-terminated th.col-callsign, #sheet-terminated td.cell-callsign{width:100px;}
+  #sheet-terminated th.col-rank, #sheet-terminated td.cell-rank{width:170px;}
+  #sheet-terminated th.col-unit, #sheet-terminated td.cell-unit{width:170px;}
+  #sheet-terminated th.col-discord, #sheet-terminated td.cell-discord{width:150px;}
+  #sheet-terminated th.col-time, #sheet-terminated td.cell-time{width:110px;}
+  #sheet-terminated th.col-promo, #sheet-terminated td.cell-promo{width:180px;}
+  #sheet-terminated th.col-notes, #sheet-terminated td.cell-notes{width:180px;}
+  .unit-tabstrip{display:flex; gap:8px; background:transparent; border-bottom:none; padding:0; overflow-x:auto;}
+  .unit-tab{border:1px solid var(--grid-strong); background:transparent; color:var(--sub); font-family:'Space Grotesk', sans-serif; font-size:0.76rem; font-weight:500; padding:8px 16px; cursor:pointer; white-space:nowrap; border-radius:8px;}
+  .unit-tab:hover{color:var(--ink); border-color:var(--sub);}
+  .unit-tab.active{background:rgba(217,154,31,0.14); color:var(--amber-deep); border-color:var(--amber); font-weight:600;}
+  .unit-tab[data-div="general"].active{ background-color:#0452C824; border-color:#536CFF; color:#40D7F0; }
+  .unit-tab[data-div="highway"].active{ background-color:#E5CF2C46; border-color:#d99a1f; color:#FBE42F; }
+  .unit-tab[data-div="tou"].active{ background-color:#6B728050; border-color:#9aa4b8; color:#F6F8FB; }
+  .unit-tab[data-div="crime"].active{ background-color:#E06A5F44; border-color:#e06a5f; color:#FF4040; }
+  .unit-tab[data-div="afp"].active{ background-color:#8B5CF640; border-color:#8B5CF6; color:#C4A8FF; }
+  .unit-tab[data-div="srcmd"].active{ background-color:#ff6b5e2E; border-color:#ff6b5e; color:#ff6b5e; }
+  .rank-note{padding:0 0 16px; font-size:0.75rem; color:var(--sub); background:transparent; border-bottom:none; line-height:1.6; max-width:760px;}
+  table.ranks-grid{width:100%; border-collapse:separate; border-spacing:0;}
+  table.ranks-grid th, table.ranks-grid td{border:none; border-bottom:1px solid var(--grid); padding:11px 16px; text-align:left; font-size:0.82rem;}
+  table.ranks-grid th{background:transparent; font-size:0.66rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--sub); border-bottom:1px solid var(--grid-strong);}
+  table.ranks-grid td.rk-no{width:52px; text-align:left; color:var(--sub); background:transparent; font-family:'IBM Plex Mono', monospace;}
+  table.ranks-grid tr:nth-child(even) td:not(.rk-no){background:var(--cell-alt);}
+  table.ranks-grid{background:var(--cell); border:1px solid var(--grid); border-radius:12px; overflow:hidden;}
+  .sheettabs{display:flex; flex-direction:column; align-items:stretch; width:92px; flex-shrink:0; background:var(--corner); border-right:1px solid var(--grid); border-bottom:none; padding:20px 10px; gap:8px; position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto; z-index:5;}
+  .sheettab{border:none; background:transparent; color:var(--sub); font-family:'Space Grotesk', sans-serif; font-size:0.66rem; font-weight:600; padding:12px 6px; cursor:pointer; border-radius:10px; white-space:normal; text-align:center; line-height:1.3;}
+  .sheettab:hover{color:var(--ink); background:var(--cell-alt);}
+  .sheettab.active{background:rgba(217,154,31,0.14); color:var(--amber-deep); border-bottom:none;}
+  .sheettabs .plus{display:none;}
+  .foot-note{text-align:center; font-size:0.68rem; color:var(--sub); padding:14px 0 4px;}
+  ::selection{background:var(--amber); color:var(--navy);}
+  .eoi-cert-list{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; margin-top:16px;}
+  .eoi-cert-card{background:var(--cell); border:1px solid var(--grid); border-radius:12px; padding:16px;}
+  .eoi-cert-card .eoi-cert-title{font-weight:700; color:var(--amber-deep); font-size:0.95rem; margin-bottom:4px;}
+  .eoi-cert-card .eoi-cert-rank{color:var(--sub); font-size:0.74rem; margin-bottom:12px;}
+  .eoi-question{margin-bottom:12px;}
+  .eoi-question label{display:block; font-size:0.78rem; color:var(--ink); margin-bottom:6px; line-height:1.4;}
+  .eoi-question textarea{width:100%; box-sizing:border-box; border:1px solid var(--grid-strong); background:var(--headbg); border-radius:6px; padding:9px 10px; font-family:'IBM Plex Mono', monospace; font-size:0.82rem; color:var(--ink); resize:vertical; min-height:70px;}
+  .eoi-question textarea:focus{outline:none; border-color:var(--amber);}
+  .status-badge{display:inline-block; border-radius:5px; padding:3px 9px; font-size:0.7rem; font-weight:600; font-family:'Space Grotesk', sans-serif; border:1px solid transparent; white-space:nowrap;}
+  .status-badge.status-pending{background:rgba(251,228,47,0.16); color:#fbe42f; border-color:rgba(251,228,47,0.4);}
+  .status-badge.status-accepted{background:rgba(47,143,91,0.16); color:#7fd6a5; border-color:rgba(47,143,91,0.4);}
+  .status-badge.status-denied{background:rgba(255,64,64,0.14); color:#ff6b5e; border-color:rgba(255,64,64,0.4);}
+  .eoi-app-card{background:var(--cell); border:1px solid var(--grid); border-radius:12px; padding:16px; margin-bottom:12px;}
+  .eoi-app-card .eoi-app-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+  .eoi-app-card .eoi-app-title{font-weight:700; color:var(--ink); font-size:0.9rem;}
+  .eoi-app-card .eoi-app-meta{color:var(--sub); font-size:0.72rem; font-family:'IBM Plex Mono', monospace;}
+  .eoi-app-card.eoi-card-flash{outline:2px solid var(--amber); background:rgba(217,154,31,0.14); transition:background 0.3s ease;}
+  .eoi-qa{margin-bottom:8px;}
+  .eoi-qa .eoi-qa-q{font-size:0.72rem; color:var(--sub); margin-bottom:3px;}
+  .eoi-qa .eoi-qa-a{font-size:0.82rem; color:var(--ink); white-space:pre-wrap; line-height:1.45;}
+  .eoi-app-actions{display:flex; gap:8px; margin-top:12px;}
+  @media (max-width:720px){
+    th.col-unit, td.cell-unit{display:none;}
+    th.col-discord, td.cell-discord{display:none;}
+    th.col-promo, td.cell-promo{display:none;}
+    th.col-fto, td.cell-fto{display:none;}
+    th.col-notes, td.cell-notes{display:none;}
+    .sheettabs{width:64px;}
   }
 </style>
 </head>
 <body>
-<div>PLACEHOLDER_RESTORE_IN_PROGRESS</div>
+
+<div class="app-shell">
+  <div class="sheettabs" id="sheettabs">
+  </div>
+
+  <div class="main-col">
+    <div class="titlebar">
+      <span class="dot"></span>
+      <span class="fname">FallenPD Roster</span>
+      <span id="auth-status" style="margin-left:14px;">checking login…</span>
+      <a id="login-btn" href="#" style="display:none; margin-left:10px; background:#5865F2; color:#fff; font-family:'Space Grotesk', sans-serif; font-size:0.68rem; font-weight:700; padding:6px 12px; text-decoration:none;">Log in with Discord</a>
+      <button id="logout-btn" type="button" style="display:none; margin-left:10px; background:transparent; border:1px solid #3d4a63; color:#aab6ca; font-size:0.68rem; padding:5px 10px; cursor:pointer;">Log out</button>
+      <span class="fsub" id="saved-indicator">connecting…</span>
+    </div>
+    <div class="formulabar" style="position:relative;">
+      <div class="cellref" id="cellref">A1</div>
+      <div class="fx">fx</div>
+      <input id="search-box" placeholder="Search callsign, officer name...">
+      <div class="search-dropdown" id="search-dropdown"></div>
+    </div>
+
+    <div class="wrap" id="sheets-container">
+
+      <div class="sheet active" id="sheet-callsigns">
+        <div class="unit-tabstrip" id="callsigns-tabstrip"></div>
+        <div id="callsigns-divisions-container"></div>
+      </div>
+
+      <div class="sheet" id="sheet-academy">
+        <div class="unit-tabstrip" id="academy-tabstrip">
+          <button class="unit-tab active" data-sub="fto-list" type="button">FTO LIST</button>
+          <button class="unit-tab" data-sub="student-checklist" type="button">Student checklist</button>
+        </div>
+
+        <div class="sheet active" id="academy-sub-fto-list">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-academy">0 rows</span>
+            <div class="spacer"></div>
+          </div>
+          <div class="rank-note">Everyone currently holding an FTO Status, pulled automatically from every division. Set or clear someone's status from here, or from the FTO button on their row in Callsigns.</div>
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+                <th class="colhead col-rank"><span class="letter">B</span><span class="fieldname">Rank</span></th>
+                <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+                <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
+                <th class="colhead col-promo"><span class="letter">E</span><span class="fieldname">FTO Status</span></th>
+                <th class="colhead col-actions"><span class="letter">F</span><span class="fieldname">&nbsp;</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-academy"></tbody>
+          </table></div>
+        </div>
+
+        <div class="sheet" id="academy-sub-student-checklist">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-students">0 rows</span>
+            <div class="spacer"></div>
+          </div>
+          <div class="rank-note">Everyone currently ranked student, pulled automatically from every division. Use Promote to advance them once training is complete.</div>
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+                <th class="colhead col-rank"><span class="letter">B</span><span class="fieldname">Rank</span></th>
+                <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+                <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
+                <th class="colhead col-promo"><span class="letter">E</span><span class="fieldname">Discord ID</span></th>
+                <th class="colhead col-checklist"><span class="letter">F</span><span class="fieldname">Checklist</span></th>
+                <th class="colhead col-actions"><span class="letter">G</span><span class="fieldname">&nbsp;</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-students"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet-eoi">
+        <div class="unit-tabstrip" id="eoi-tabstrip">
+          <button class="unit-tab active" data-sub="apply" type="button">Apply</button>
+          <button class="unit-tab" data-sub="review" type="button" id="eoi-review-tab-btn" style="display:none;">Review</button>
+        </div>
+
+        <div class="sheet active" id="eoi-sub-apply">
+          <div class="rank-note">Browse open certifications and apply directly below. Staff review applications on the Review tab — once accepted, you'll get a private Discord thread with an Acknowledge button that grants the role.</div>
+          <div class="eoi-cert-list" id="eoi-cert-list"></div>
+
+          <div class="toolbar-row" style="margin-top:26px;">
+            <span class="pill">My applications</span>
+          </div>
+          <div id="eoi-my-applications"></div>
+        </div>
+
+        <div class="sheet" id="eoi-sub-review">
+          <div class="toolbar-row">
+            <span class="pill" id="eoi-pending-count-label">0 pending</span>
+          </div>
+          <div class="rank-note">Pending certification applications — review the answers and Accept or Deny. Accepting opens a private Discord thread for the applicant with an Acknowledge button that grants their role.</div>
+          <div id="eoi-review-list"></div>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet-seniorcommand">
+        <div class="unit-tabstrip" id="seniorcommand-tabstrip">
+          <button class="unit-tab active" data-sub="terminated" type="button">Terminated officers</button>
+          <button class="unit-tab" data-sub="promotions" type="button">Promotion logs</button>
+          <button class="unit-tab" data-sub="eoi-log" type="button">Applications log</button>
+        </div>
+
+        <div class="sheet active" id="seniorcmd-sub-terminated">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-terminated">0 rows</span>
+            <span class="pill" id="filtered-count-pill-terminated"></span>
+            <div class="spacer"></div>
+            <button class="btn" id="export-btn-terminated" type="button">Export .csv</button>
+          </div>
+
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+                <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-terminated" type="button">▾</button>
+                  <div class="filter-pop" id="rank-filter-pop-terminated"></div>
+                </span></th>
+                <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+                <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Discord ID</span></th>
+                <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Termination date<button class="filter-btn" id="time-sort-btn-terminated" type="button">↕</button></span></th>
+                <th class="colhead col-promo"><span class="letter">F</span><span class="fieldname">Terminating officer</span></th>
+                <th class="colhead col-notes"><span class="letter">G</span><span class="fieldname">Notes</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-terminated"></tbody>
+          </table></div>
+        </div>
+
+        <div class="sheet" id="seniorcmd-sub-promotions">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-promotions">0 rows</span>
+            <div class="spacer"></div>
+          </div>
+          <div class="rank-note">Every rank or division change made through the Promote popover, logged automatically — newest first. This is a history, not an editable roster.</div>
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-callsign" style="width:150px;"><span class="letter">A</span><span class="fieldname">Officer</span></th>
+                <th class="colhead col-unit"><span class="letter">B</span><span class="fieldname">From</span></th>
+                <th class="colhead col-promo"><span class="letter">C</span><span class="fieldname">To</span></th>
+                <th class="colhead col-unit"><span class="letter">D</span><span class="fieldname">Promoting officer</span></th>
+                <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Date</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-promotions"></tbody>
+          </table></div>
+        </div>
+
+        <div class="sheet" id="seniorcmd-sub-eoi-log">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-eoi-log">0 rows</span>
+            <div class="spacer"></div>
+          </div>
+          <div class="rank-note">Every certification application, logged automatically — newest first. Shows who applied, what for, its status, and who reviewed it. The application's actual answers are never logged here — see the Review tab for those, while an application is still pending.</div>
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-unit"><span class="letter">A</span><span class="fieldname">Applicant</span></th>
+                <th class="colhead col-unit"><span class="letter">B</span><span class="fieldname">Certification</span></th>
+                <th class="colhead col-promo"><span class="letter">C</span><span class="fieldname">Status</span></th>
+                <th class="colhead col-promo"><span class="letter">D</span><span class="fieldname">Reviewed by</span></th>
+                <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Date</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-eoi-log"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet-ranks">
+        <div class="rank-note" id="rank-note">Full NSW-style rank ladder, most senior first — used across every division. Police liaison is a force-wide executive rank.</div>
+        <table class="ranks-grid">
+          <thead>
+            <tr><th style="width:52px;">No.</th><th>Rank</th></tr>
+          </thead>
+          <tbody id="rank-body"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="foot-note">Shared roster — everyone with this link sees and edits the same data. Not affiliated with NSW Police Force.</div>
+  </div>
+</div>
+
+<div class="promote-pop" id="promote-pop">
+  <div class="promote-pop-head">Promote / transfer</div>
+  <label>Division</label>
+  <select id="promote-division-select"></select>
+  <label>New rank</label>
+  <select id="promote-rank-select"></select>
+  <div class="promote-pop-actions">
+    <button class="btn" id="promote-cancel-btn" type="button">Cancel</button>
+    <button class="btn primary" id="promote-confirm-btn" type="button">Confirm</button>
+  </div>
+</div>
+
+<div class="fto-pop" id="fto-pop">
+  <div class="promote-pop-head" style="padding:10px 12px 4px;">Set FTO status</div>
+  <div id="fto-pop-list"></div>
+</div>
+
+<div class="checklist-overlay" id="checklist-overlay">
+  <div class="checklist-modal">
+    <div class="checklist-modal-head">
+      <div>
+        <div class="checklist-modal-title">Promotion Checklist</div>
+        <div class="checklist-modal-sub" id="checklist-modal-sub">for —</div>
+      </div>
+      <button class="checklist-x" id="checklist-close-btn" type="button" title="Close">×</button>
+    </div>
+    <div class="checklist-bar-track"><div class="checklist-bar-fill" id="checklist-bar-fill"></div></div>
+    <div class="checklist-progress" id="checklist-progress-text">0/9 complete</div>
+    <div id="checklist-pop-list" class="checklist-list"></div>
+  </div>
+</div>
+
+<div class="checklist-overlay" id="eoi-apply-overlay">
+  <div class="checklist-modal" style="width:520px;">
+    <div class="checklist-modal-head">
+      <div>
+        <div class="checklist-modal-title" id="eoi-apply-title">Apply</div>
+        <div class="checklist-modal-sub" id="eoi-apply-sub"></div>
+      </div>
+      <button class="checklist-x" id="eoi-apply-close-btn" type="button" title="Close">×</button>
+    </div>
+    <div style="padding:0 20px 20px;">
+      <div id="eoi-apply-questions"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" id="eoi-apply-cancel-btn" type="button">Cancel</button>
+        <button class="btn primary" id="eoi-apply-submit-btn" type="button">Submit application</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-modal">
+    <div class="confirm-modal-msg" id="confirm-modal-msg"></div>
+    <div id="confirm-modal-reason-wrap" style="display:none;">
+      <label for="confirm-modal-reason" id="confirm-modal-reason-label" style="display:block; font-size:0.65rem; color:var(--sub); font-weight:600; margin-bottom:4px;">Reason (optional)</label>
+      <textarea id="confirm-modal-reason" rows="3" style="width:100%; border:1px solid var(--grid-strong); background:var(--headbg); color:var(--ink); padding:8px 9px; font-family:'IBM Plex Mono', monospace; font-size:0.78rem; resize:vertical; border-radius:6px;"></textarea>
+      <div id="confirm-modal-reason-error" style="display:none; color:var(--alert); font-size:0.68rem; margin-top:4px;">A reason is required.</div>
+      <div style="margin-bottom:12px;"></div>
+    </div>
+    <div class="confirm-modal-actions">
+      <button class="btn" id="confirm-modal-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="confirm-modal-ok" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = "https://pxedimvexqywvxwyoiom.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_GpxMXE0Yf8C1ujcLi08akQ_l2ZcLcGa";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const EXEC_RANKS = [
+    "Police liaison",
+    "Commissioner","Deputy Commissioner","Assistant Commissioner",
+    "Chief Superintendent","Superintendent","Chief Inspector"
+  ];
+  const NON_EXEC_RANKS = [
+    "Inspector","Senior Sergeant","Incremental Sergeant","GD supervisor",
+    "Leading Senior Constable","Incremental Senior Constable","Senior Constable",
+    "Constable","Probationary Constable","student"
+  ];
+  const RANKS = [...EXEC_RANKS, ...NON_EXEC_RANKS];
+  const SENIOR_COMMAND_RANKS = [...EXEC_RANKS, "Inspector", "Senior Sergeant"];
+  const GD_RANKS = NON_EXEC_RANKS;
+  const SHARED_LADDER_PREFIX = NON_EXEC_RANKS.slice(0, NON_EXEC_RANKS.indexOf("Incremental Sergeant") + 1);
+  const CIU_RANKS = [
+    ...SHARED_LADDER_PREFIX,
+    "Detective Supervisor","Lead Detective","Senior Detective","Detective","Trial Detective"
+  ];
+  const TOU_RANKS = [
+    ...SHARED_LADDER_PREFIX,
+    "TOU Supervisor","Lead Operator","Senior Operator","Operator","TOU trial"
+  ];
+  const RANK_ORDER_LIST = [
+    ...EXEC_RANKS,
+    ...SHARED_LADDER_PREFIX,
+    "GD supervisor","Detective Supervisor","TOU Supervisor",
+    "Leading Senior Constable","Lead Detective","Lead Operator",
+    "Incremental Senior Constable","Senior Detective","Senior Operator",
+    "Senior Constable","Detective","Operator",
+    "Constable","Trial Detective","TOU trial",
+    "Probationary Constable","student","Department Of Justice"
+  ];
+  const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [r, i]));
+
+  const RANK_TIER_WHITE = new Set(['Commissioner','Deputy Commissioner','Assistant Commissioner']);
+  const RANK_TIER_RED = new Set(['Chief Superintendent','Superintendent','Chief Inspector']);
+  const RANK_TIER_YELLOW = new Set(['Inspector']);
+  const RANK_TIER_SERGEANT_SENIOR = new Set(['Senior Sergeant']);
+  const RANK_TIER_SERGEANT = new Set(['Incremental Sergeant','GD supervisor','Detective Supervisor','TOU Supervisor']);
+  const RANK_TIER_CONSTABLE = new Set([
+    'Leading Senior Constable','Incremental Senior Constable','Senior Constable',
+    'Lead Detective','Senior Detective','Detective',
+    'Lead Operator','Senior Operator','Operator','TOU trial'
+  ]);
+  const RANK_TIER_EXEC = new Set(['Police liaison']);
+  function rankBadgeHtml(rank){
+    if(!rank) return '—';
+    const cls = RANK_TIER_WHITE.has(rank) ? 'tier-white'
+      : RANK_TIER_RED.has(rank) ? 'tier-red'
+      : RANK_TIER_YELLOW.has(rank) ? 'tier-yellow'
+      : RANK_TIER_SERGEANT_SENIOR.has(rank) ? 'tier-sergeant-senior'
+      : RANK_TIER_SERGEANT.has(rank) ? 'tier-sergeant'
+      : RANK_TIER_CONSTABLE.has(rank) ? 'tier-constable'
+      : RANK_TIER_EXEC.has(rank) ? 'tier-exec'
+      : 'tier-other';
+    return '<span class="rank-badge ' + cls + '">' + escapeHtml(rank) + '</span>';
+  }
+
+  const EXEC_CODES = {
+    "Police liaison": { prefix: "PL", base: 100 },
+    "Commissioner": { prefix: "COM", base: 100 },
+    "Deputy Commissioner": { prefix: "COM", base: 200 },
+    "Assistant Commissioner": { prefix: "COM", base: 300 },
+    "Chief Superintendent": { prefix: "CMD", base: 100 },
+    "Superintendent": { prefix: "CMD", base: 200 },
+    "Chief Inspector": { prefix: "CMD", base: 300 }
+  };
+  function divisionCodes(prefix, opts){
+    return {
+      ...EXEC_CODES,
+      "Inspector": { prefix, base: opts.inspector },
+      "Senior Sergeant": { prefix, base: opts.seniorSergeant },
+      "Incremental Sergeant": { prefix, base: opts.incrementalSergeant },
+      "GD supervisor": { prefix, base: opts.sergeant },
+      "Leading Senior Constable": { prefix, base: opts.leadingSeniorConstable },
+      "Incremental Senior Constable": { prefix, base: opts.incrementalSeniorConstable },
+      "Senior Constable": { prefix, base: opts.seniorConstable },
+      ...(opts.constable != null ? { "Constable": { prefix, base: opts.constable } } : {}),
+      ...(opts.probationaryConstable != null ? { "Probationary Constable": { prefix, base: opts.probationaryConstable } } : {}),
+      ...(opts.student != null ? { "student": { prefix, base: opts.student } } : {})
+    };
+  }
+  const DIVISION_RANK_CODES = {
+    general: divisionCodes("GD", {
+      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
+      constable: 600, probationaryConstable: 700, student: 800
+    }),
+    highway: divisionCodes("TRF", {
+      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 500, seniorConstable: 550,
+      constable: 600
+    }),
+    tou: {
+      ...EXEC_CODES,
+      "Inspector": { prefix: "TOU", base: 100 },
+      "Senior Sergeant": { prefix: "TOU", base: 200 },
+      "Incremental Sergeant": { prefix: "TOU", base: 300 },
+      "TOU Supervisor": { prefix: "TOU", base: 301 },
+      "Lead Operator": { prefix: "TOU", base: 400 },
+      "Senior Operator": { prefix: "TOU", base: 500 },
+      "TOU trial": { prefix: "TOU", base: 550 }
+    },
+    crime: {
+      ...EXEC_CODES,
+      "Inspector": { prefix: "CIU", base: 100 },
+      "Senior Sergeant": { prefix: "CIU", base: 200 },
+      "Incremental Sergeant": { prefix: "CIU", base: 300 },
+      "Detective Supervisor": { prefix: "CIU", base: 301 },
+      "Lead Detective": { prefix: "CIU", base: 400 },
+      "Senior Detective": { prefix: "CIU", base: 500 },
+      "Trial Detective": { prefix: "CIU", base: 550 }
+    },
+    afp: divisionCodes("AFP", {
+      inspector: 100, seniorSergeant: 200, incrementalSergeant: 300, sergeant: 301,
+      leadingSeniorConstable: 400, incrementalSeniorConstable: 550, seniorConstable: 500,
+      constable: 600
+    }),
+    srcmd: EXEC_CODES
+  };
+
+  const DIVISIONS = {
+    general: {
+      label: "General duties",
+      note: "General duties (GD) uses the standard non-exec ladder, Inspector down, with the Sergeant tier renamed to GD supervisor, and its own GD callsign blocks. Exec ranks (Police liaison through Chief Inspector) are promoted via Senior command.",
+      ranks: GD_RANKS
+    },
+    highway: {
+      label: "Highway patrol",
+      note: "Highway Patrol sits within the Traffic & Highway Patrol Command and uses the standard non-exec ladder, with the Sergeant tier renamed to GD supervisor, then its own TRF callsign blocks from Inspector down. Constable is the lowest rank with a TRF code on file — Probationary Constable and Student aren't coded for this division yet.",
+      ranks: GD_RANKS
+    },
+    tou: {
+      label: "Tactical Operations Unit",
+      note: "The Tactical Operations Unit (TOU) sits within the State Protection Group and uses the standard ladder through Incremental Sergeant, then its own Operator ladder: TOU Supervisor, Lead Operator, Senior Operator, Operator, TOU trial. Operator has no callsign code of its own — promoting from TOU trial keeps the same callsign and only changes Discord roles.",
+      ranks: TOU_RANKS
+    },
+    crime: {
+      label: "Criminal Investigations Unit",
+      note: "Criminal Investigations Unit (CIU) — State Crime Command and Criminal Investigations — uses the standard ladder through Incremental Sergeant, then its own Detective ladder: Detective Supervisor, Lead Detective, Senior Detective, Detective, Trial Detective. Detective has no callsign code of its own — promoting from Trial Detective keeps the same callsign and only changes Discord roles.",
+      ranks: CIU_RANKS
+    },
+    afp: {
+      label: "Department Of Justice",
+      note: "Department Of Justice (DOJ) uses its own AFP-prefixed callsign blocks from Inspector down to Constable. Probationary Constable and Student aren't coded for this division yet. Federal liaisons are logged with the flat \"Department Of Justice\" rank rather than the PD ladder.",
+      ranks: ["Department Of Justice", ...GD_RANKS]
+    }
+  };
+  const DIVISION_KEYS = Object.keys(DIVISIONS);
+
+  const STORAGE_KEYS = ['shared', ...DIVISION_KEYS, 'terminated'];
+
+  let entriesByDivision = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
+  let promotionLog = [];
+  let loadError = false;
+
+  const DISCORD_CLIENT_ID = "1550404631366991893";
+  let currentUser = { loggedIn: false, perms: {} };
+
+  function buildDiscordLoginUrl(){
+    const redirectUri = 'https://www.fallenpd.com/api/auth/callback';
+    const params = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'identify'
+    });
+    return 'https://discord.com/api/oauth2/authorize?' + params.toString();
+  }
+
+  async function apiPost(path, body){
+    const res = await fetch(path, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    if(!res.ok){
+      let data = {};
+      try{ data = await res.json(); }catch(e){}
+      alert(data.error || ('Action failed (' + res.status + ')'));
+      throw new Error(data.error || ('HTTP ' + res.status));
+    }
+    return res.json();
+  }
+
+  async function loadAuth(){
+    try{
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      currentUser = await res.json();
+      if(!currentUser.perms) currentUser.perms = {};
+    }catch(e){
+      console.error('Could not load auth state', e);
+      currentUser = { loggedIn: false, perms: {} };
+    }
+    const statusEl = document.getElementById('auth-status');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    loginBtn.href = buildDiscordLoginUrl();
+    if(currentUser.loggedIn){
+      statusEl.textContent = currentUser.username + (currentUser.perms.tier1 ? ' · full access' : currentUser.perms.tier3 ? ' · FTO staff' : currentUser.perms.tier2 ? ' · FTO' : ' · view only');
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = '';
+    } else {
+      statusEl.textContent = 'not logged in';
+      loginBtn.style.display = '';
+      logoutBtn.style.display = 'none';
+    }
+    applyPermissionGating();
+  }
+
+  function applyPermissionGating(){
+    const p = currentUser.perms || {};
+    DIVISION_KEYS.forEach(key => {
+      const row = document.getElementById('entry-row-' + key);
+      if(row) row.style.display = p.canAdd ? '' : 'none';
+    });
+
+    const academyTab = document.querySelector('.sheettab[data-sheet="sheet-academy"]');
+    if(academyTab) academyTab.style.display = p.canViewAcademy ? '' : 'none';
+    const seniorCommandTab = document.querySelector('.sheettab[data-sheet="sheet-seniorcommand"]');
+    if(seniorCommandTab) seniorCommandTab.style.display = p.canViewSeniorCommand ? '' : 'none';
+    const activeTab = document.querySelector('.sheettab.active');
+    if(activeTab && activeTab.style.display === 'none'){
+      activateSheet('sheet-callsigns');
+    }
+
+    const srcmdPromoteOption = promoteDivisionSelect.querySelector('option[value="srcmd"]');
+    if(srcmdPromoteOption) srcmdPromoteOption.disabled = !p.canViewHighCommand;
+
+    const eoiReviewTabBtn = document.getElementById('eoi-review-tab-btn');
+    const canReviewEoi = !!(p.canPromoteAny || p.isDOJ);
+    if(eoiReviewTabBtn){
+      eoiReviewTabBtn.style.display = canReviewEoi ? '' : 'none';
+      if(!canReviewEoi && eoiReviewTabBtn.classList.contains('active')){
+        document.querySelector('#eoi-tabstrip .unit-tab[data-sub="apply"]').click();
+      }
+    }
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    window.location.href = '/api/auth/logout';
+  });
+
+  function rowToEntry(row){
+    return {
+      id: row.id, callsign: row.callsign, rank: row.rank, unit: row.unit,
+      discord: row.discord, promo: row.promo, time: row.time,
+      fto: row.fto || '', notes: row.notes || '',
+      checklist: row.checklist || {}, created: row.created
+    };
+  }
+  function rowToPromo(row){
+    return {
+      id: row.id, name: row.name, callsign: row.callsign,
+      fromRank: row.from_rank, fromDivision: row.from_division,
+      toRank: row.to_rank, toDivision: row.to_division,
+      promotedBy: row.promoted_by,
+      date: row.date, created: row.created
+    };
+  }
+
+  async function reloadOfficers(){
+    const { data, error } = await sb.from('officers').select('*');
+    if(error){ console.error('Could not load officers', error); loadError = true; return; }
+    loadError = false;
+    const out = { shared: [], general: [], highway: [], tou: [], crime: [], afp: [], terminated: [] };
+    (data || []).forEach(row => {
+      const key = STORAGE_KEYS.includes(row.list_key) ? row.list_key : 'general';
+      out[key].push(rowToEntry(row));
+    });
+    entriesByDivision = out;
+  }
+  async function reloadPromotions(){
+    const { data, error } = await sb.from('promotion_log').select('*').order('created', { ascending: false });
+    if(error){ console.error('Could not load promotion log', error); return; }
+    promotionLog = (data || []).map(rowToPromo);
+  }
+  async function reloadAll(){
+    await Promise.all([reloadOfficers(), reloadPromotions()]);
+    renderAllDivisions();
+    renderSeniorCommand();
+    renderTerminated();
+    renderAcademy();
+    renderStudentChecklist();
+    renderPromotionLogs();
+    document.getElementById('saved-indicator').textContent = loadError ? 'offline — check connection' : 'synced';
+  }
+
+  async function insertOfficerRow(entry, listKey){
+    const { error } = await sb.from('officers').insert({
+      id: entry.id, list_key: listKey, callsign: entry.callsign, rank: entry.rank,
+      unit: entry.unit, discord: entry.discord, promo: entry.promo, time: entry.time,
+      fto: entry.fto || '', notes: entry.notes || '', checklist: entry.checklist || {},
+      created: entry.created
+    });
+    if(error) console.error('Could not save officer', error);
+  }
+  async function updateOfficerRow(id, fields){
+    const payload = {};
+    if('listKey' in fields) payload.list_key = fields.listKey;
+    ['callsign','rank','unit','discord','promo','time','fto','notes','checklist'].forEach(k => {
+      if(k in fields) payload[k] = fields[k];
+    });
+    const { error } = await sb.from('officers').update(payload).eq('id', id);
+    if(error) console.error('Could not update officer', error);
+  }
+  async function insertPromotionLogRow(p){
+    const { error } = await sb.from('promotion_log').insert({
+      id: p.id, name: p.name, callsign: p.callsign, from_rank: p.fromRank,
+      from_division: p.fromDivision, to_rank: p.toRank, to_division: p.toDivision,
+      date: p.date, created: p.created
+    });
+    if(error) console.error('Could not save promotion log entry', error);
+  }
+  function divisionLabelFor(listKey){
+    if(listKey === 'shared') return 'Shared (Executive)';
+    if(listKey === 'terminated') return 'Terminated';
+    return (DIVISIONS[listKey] && DIVISIONS[listKey].label) || listKey;
+  }
+
+  const HCT_ANNOUNCE_RANKS = new Set([
+    'Commissioner','Deputy Commissioner','Assistant Commissioner',
+    'Chief Superintendent','Superintendent','Chief Inspector','Police liaison'
+  ]);
+  function announceDivisionLabel(rank, listKey){
+    return HCT_ANNOUNCE_RANKS.has(rank) ? 'High Command Team' : divisionLabelFor(listKey);
+  }
+
+  function listKeyFor(divKey, rank){ return EXEC_CODES[rank] ? 'shared' : divKey; }
+
+  function findEntry(divKey, id){
+    let idx = entriesByDivision.shared.findIndex(e => e.id === id);
+    if(idx !== -1) return { listKey: 'shared', idx };
+    idx = (entriesByDivision[divKey] || []).findIndex(e => e.id === id);
+    if(idx !== -1) return { listKey: divKey, idx };
+    return null;
+  }
+
+  const CALLSIGN_INHERITORS = {
+    tou: { 'TOU trial': ['Operator'] },
+    crime: { 'Trial Detective': ['Detective'] }
+  };
+
+  function nextCallsignForRank(divKey, rank){
+    const codes = DIVISION_RANK_CODES[divKey];
+    const code = codes ? codes[rank] : null;
+    if(!code) return '';
+    const listKey = listKeyFor(divKey, rank);
+    const list = entriesByDivision[listKey] || [];
+    const inheritors = (CALLSIGN_INHERITORS[divKey] && CALLSIGN_INHERITORS[divKey][rank]) || [];
+    const familyRanks = new Set([rank, ...inheritors]);
+    const used = new Set(list.filter(e => familyRanks.has(e.rank)).map(e => e.callsign));
+    let n = code.base;
+    while(used.has(code.prefix + '-' + n)) n++;
+    return code.prefix + '-' + n;
+  }
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  const confirmOverlayEl = document.getElementById('confirm-overlay');
+  const confirmModalMsgEl = document.getElementById('confirm-modal-msg');
+  const confirmModalOkEl = document.getElementById('confirm-modal-ok');
+  const confirmModalCancelEl = document.getElementById('confirm-modal-cancel');
+  const confirmReasonWrapEl = document.getElementById('confirm-modal-reason-wrap');
+  const confirmReasonInputEl = document.getElementById('confirm-modal-reason');
+  const confirmReasonLabelEl = document.getElementById('confirm-modal-reason-label');
+  const confirmReasonErrorEl = document.getElementById('confirm-modal-reason-error');
+  let confirmResolveFn = null;
+  let confirmRequireReason = false;
+  function showConfirm(message, onConfirm, opts){
+    opts = opts || {};
+    confirmModalMsgEl.textContent = message;
+    confirmResolveFn = onConfirm;
+    confirmRequireReason = !!opts.requireReason;
+    confirmReasonWrapEl.style.display = opts.withReason ? 'block' : 'none';
+    confirmReasonLabelEl.textContent = confirmRequireReason ? 'Reason (required)' : 'Reason (optional)';
+    confirmReasonInputEl.value = '';
+    confirmReasonInputEl.style.borderColor = 'var(--grid-strong)';
+    confirmReasonErrorEl.style.display = 'none';
+    confirmOverlayEl.classList.add('open');
+    if(opts.withReason) setTimeout(() => confirmReasonInputEl.focus(), 30);
+  }
+  function closeConfirm(){
+    confirmOverlayEl.classList.remove('open');
+    confirmResolveFn = null;
+  }
+  confirmModalOkEl.addEventListener('click', () => {
+    const reason = confirmReasonInputEl.value.trim();
+    if(confirmRequireReason && !reason){
+      confirmReasonInputEl.style.borderColor = 'var(--alert)';
+      confirmReasonErrorEl.style.display = 'block';
+      confirmReasonInputEl.focus();
+      return;
+    }
+    const fn = confirmResolveFn;
+    closeConfirm();
+    if(fn) fn(reason);
+  });
+  confirmModalCancelEl.addEventListener('click', closeConfirm);
+  confirmOverlayEl.addEventListener('click', (ev) => {
+    if(ev.target === confirmOverlayEl) closeConfirm();
+  });
+
+  function terminateOfficer(divKey, id){
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    showConfirm('Terminate ' + (entry.unit || entry.callsign) + '? They will be moved to the Terminated officers tab.', async (reason) => {
+      const time = todayStr();
+      await apiPost('/api/officers/terminate', { id: entry.id, time, notes: reason });
+      await reloadAll();
+      activateSheet('sheet-seniorcommand');
+      activateSeniorCommandSub('terminated');
+      requestAnimationFrame(() => {
+        const row = document.querySelector('#log-body-terminated tr[data-row-id="' + entry.id + '"]');
+        if(row){
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.add('row-flash');
+          setTimeout(() => row.classList.remove('row-flash'), 1800);
+        }
+      });
+    }, { withReason: true, requireReason: true });
+  }
+
+  function promoteStudentToProbationary(divKey, id){
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    if(entry.rank !== 'student') return;
+    showConfirm('Promote ' + (entry.unit || entry.callsign) + ' to Probationary Constable?', async () => {
+      const newRank = 'Probationary Constable';
+      const newListKey = found.listKey;
+      const suggestion = nextCallsignForRank(divKey, newRank);
+      const newCallsign = suggestion || entry.callsign;
+      await apiPost('/api/officers/promote', {
+        id: entry.id,
+        listKey: newListKey,
+        callsign: newCallsign,
+        rank: newRank,
+        time: entry.time,
+        toDivisionLabel: announceDivisionLabel(newRank, newListKey),
+        logEntry: {
+          id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
+          name: entry.unit || entry.callsign,
+          callsign: newCallsign,
+          from_rank: entry.rank,
+          from_division: divisionLabelFor(found.listKey),
+          to_rank: newRank,
+          to_division: divisionLabelFor(newListKey),
+          date: todayStr(),
+          created: Date.now()
+        }
+      });
+      await reloadAll();
+    });
+  }
+
+  const FTO_RANKS = ["Head Of Academy", "FTO Director", "FTO supervisor", "Senior FTO", "FTO"];
+  const ftoPopEl = document.getElementById('fto-pop');
+  const ftoPopListEl = document.getElementById('fto-pop-list');
+
+  function openFtoPop(btnEl, divKey, id){
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+
+    ftoPopListEl.innerHTML = '';
+    const noneBtn = document.createElement('button');
+    noneBtn.textContent = 'None';
+    noneBtn.className = !entry.fto ? 'sel' : '';
+    noneBtn.addEventListener('click', () => setFtoStatus(divKey, id, ''));
+    ftoPopListEl.appendChild(noneBtn);
+    FTO_RANKS.forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r;
+      b.className = entry.fto === r ? 'sel' : '';
+      b.addEventListener('click', () => setFtoStatus(divKey, id, r));
+      ftoPopListEl.appendChild(b);
+    });
+
+    const rect = btnEl.getBoundingClientRect();
+    ftoPopEl.style.top = Math.min(rect.bottom + 6, window.innerHeight - 280) + 'px';
+    ftoPopEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 206)) + 'px';
+    ftoPopEl.classList.add('open');
+  }
+  function closeFtoPop(){ ftoPopEl.classList.remove('open'); }
+  async function setFtoStatus(divKey, id, value){
+    const found = findEntry(divKey, id);
+    if(!found){ closeFtoPop(); return; }
+    closeFtoPop();
+    await apiPost('/api/officers/fto', { id, value });
+    await reloadAll();
+  }
+  document.addEventListener('click', (ev) => {
+    if(ftoPopEl.classList.contains('open') && !ev.target.closest('.fto-pop') && !ev.target.closest('.row-fto')){
+      closeFtoPop();
+    }
+  });
+  window.addEventListener('scroll', () => { if(ftoPopEl.classList.contains('open')) closeFtoPop(); }, true);
+
+  const FTO_ORDER = Object.fromEntries(FTO_RANKS.map((r, i) => [r, i]));
+  function renderAcademy(){
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    const rows = [];
+    (entriesByDivision.shared || []).forEach(e => {
+      if(e.fto) rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'All divisions' });
+    });
+    DIVISION_KEYS.forEach(k => {
+      (entriesByDivision[k] || []).forEach(e => {
+        if(e.fto) rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
+      });
+    });
+    const filtered = rows
+      .filter(r => !q || (r.entry.callsign + ' ' + (r.entry.unit||'')).toLowerCase().includes(q))
+      .sort((a, b) => (FTO_ORDER[a.entry.fto] ?? 999) - (FTO_ORDER[b.entry.fto] ?? 999));
+
+    document.getElementById('entry-count-label-academy').textContent = filtered.length + (filtered.length === 1 ? ' row' : ' rows');
+
+    const body = document.getElementById('log-body-academy');
+    body.innerHTML = '';
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="6">No one currently holds an FTO Status. Set one from the FTO button on a Callsigns row.</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    const pAcademy = currentUser.perms || {};
+    filtered.forEach(r => {
+      const e = r.entry;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
+        <td class="cell-promo">${escapeHtml(e.fto)}</td>
+        <td class="cell-actions">${pAcademy.canSetFto ? `<button class="row-fto" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Change FTO status">FTO</button>` : ''}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+  document.getElementById('log-body-academy').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button.row-fto');
+    if(!btn) return;
+    openFtoPop(btn, btn.getAttribute('data-div'), btn.getAttribute('data-id'));
+  });
+
+  const CHECKLIST_ITEMS = [
+    "Driving skills",
+    "MDT Usage",
+    "General Radio Communication",
+    "Traffic stops",
+    "Pursuits",
+    "Cautioning suspects",
+    "Giving out jail sentences",
+    "Filling out cases",
+    "Understanding of a police move-along"
+  ];
+  const checklistOverlayEl = document.getElementById('checklist-overlay');
+  const checklistPopListEl = document.getElementById('checklist-pop-list');
+  const checklistSubEl = document.getElementById('checklist-modal-sub');
+  const checklistBarFillEl = document.getElementById('checklist-bar-fill');
+  const checklistProgressTextEl = document.getElementById('checklist-progress-text');
+
+  function checklistDoneCount(entry){
+    return CHECKLIST_ITEMS.filter(item => entry.checklist && entry.checklist[item]).length;
+  }
+  function checklistProgressLabel(entry){
+    return checklistDoneCount(entry) + '/' + CHECKLIST_ITEMS.length;
+  }
+  function checklistComplete(entry){
+    return CHECKLIST_ITEMS.every(item => entry.checklist && entry.checklist[item]);
+  }
+  function refreshChecklistProgressUI(entry){
+    const done = checklistDoneCount(entry);
+    const pct = Math.round((done / CHECKLIST_ITEMS.length) * 100);
+    checklistBarFillEl.style.width = pct + '%';
+    checklistBarFillEl.classList.toggle('complete', done === CHECKLIST_ITEMS.length);
+    checklistProgressTextEl.textContent = checklistProgressLabel(entry) + ' complete';
+  }
+
+  function openChecklistPop(btnEl, divKey, id){
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    if(!entry.checklist) entry.checklist = {};
+
+    checklistSubEl.textContent = 'for ' + (entry.unit || entry.callsign);
+    refreshChecklistProgressUI(entry);
+
+    checklistPopListEl.innerHTML = '';
+    CHECKLIST_ITEMS.forEach(item => {
+      const label = document.createElement('label');
+      label.className = 'checklist-item' + (entry.checklist[item] ? ' done' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!entry.checklist[item];
+      const check = document.createElement('span');
+      check.className = 'checklist-check';
+      check.textContent = '✓';
+      const span = document.createElement('span');
+      span.className = 'item-label';
+      span.textContent = item;
+      cb.addEventListener('change', async () => {
+        entry.checklist[item] = cb.checked;
+        label.classList.toggle('done', cb.checked);
+        refreshChecklistProgressUI(entry);
+        renderStudentChecklist();
+        await apiPost('/api/officers/checklist', { id: entry.id, checklist: entry.checklist });
+        await reloadOfficers();
+        renderStudentChecklist();
+      });
+      label.appendChild(cb);
+      label.appendChild(check);
+      label.appendChild(span);
+      checklistPopListEl.appendChild(label);
+    });
+
+    checklistOverlayEl.classList.add('open');
+  }
+  function closeChecklistPop(){ checklistOverlayEl.classList.remove('open'); }
+  document.getElementById('checklist-close-btn').addEventListener('click', closeChecklistPop);
+  checklistOverlayEl.addEventListener('click', (ev) => {
+    if(ev.target === checklistOverlayEl) closeChecklistPop();
+  });
+
+  function renderStudentChecklist(){
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    const rows = [];
+    (entriesByDivision.shared || []).forEach(e => {
+      if(e.rank === 'student') rows.push({ entry: e, divKey: DIVISION_KEYS[0], divLabel: 'All divisions' });
+    });
+    DIVISION_KEYS.forEach(k => {
+      (entriesByDivision[k] || []).forEach(e => {
+        if(e.rank === 'student') rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
+      });
+    });
+    const filtered = rows
+      .filter(r => !q || (r.entry.callsign + ' ' + (r.entry.unit||'')).toLowerCase().includes(q))
+      .sort((a, b) => (a.entry.time||'').localeCompare(b.entry.time||''));
+
+    document.getElementById('entry-count-label-students').textContent = filtered.length + (filtered.length === 1 ? ' row' : ' rows');
+
+    const body = document.getElementById('log-body-students');
+    body.innerHTML = '';
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="7">No one is currently ranked student.</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    const pStudents = currentUser.perms || {};
+    filtered.forEach(r => {
+      const e = r.entry;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
+        <td class="cell-promo">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-checklist"><button class="row-checklist${checklistComplete(e) ? ' complete' : ''}" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promotion checklist">${checklistProgressLabel(e)}</button></td>
+        <td class="cell-actions">${(pStudents.canPromoteAny || pStudents.canPromoteStudent) ? `<button class="row-promote" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promote / transfer">↑</button>` : ''}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+  document.getElementById('log-body-students').addEventListener('click', (ev) => {
+    const checklistBtn = ev.target.closest('button.row-checklist');
+    if(checklistBtn){
+      openChecklistPop(checklistBtn, checklistBtn.getAttribute('data-div'), checklistBtn.getAttribute('data-id'));
+      return;
+    }
+    const btn = ev.target.closest('button.row-promote');
+    if(!btn) return;
+    const divKey = btn.getAttribute('data-div');
+    const id = btn.getAttribute('data-id');
+    const p = currentUser.perms || {};
+    if(p.canPromoteAny){
+      openPromotePop(btn, divKey, id, 'Promote / transfer');
+    } else if(p.canPromoteStudent){
+      promoteStudentToProbationary(divKey, id);
+    }
+  });
+
+  function fmtTime(iso){
+    if(!iso) return '—';
+    const parts = iso.slice(0, 10).split('-');
+    if(parts.length !== 3) return iso;
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    if(isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+  }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  const callsignsDivisionsContainer = document.getElementById('callsigns-divisions-container');
+  const callsignsTabstripEl = document.getElementById('callsigns-tabstrip');
+  let activeCallsignDiv = DIVISION_KEYS[0];
+
+  const srcmdSheet = document.createElement('div');
+  srcmdSheet.className = 'sheet';
+  srcmdSheet.id = 'sheet-srcmd';
+  srcmdSheet.innerHTML = `
+    <div class="toolbar-row">
+      <span class="pill" id="entry-count-label-srcmd">0 rows</span>
+      <span class="pill" id="filtered-count-pill-srcmd"></span>
+      <div class="spacer"></div>
+      <button class="btn" id="export-btn-srcmd" type="button">Export .csv</button>
+    </div>
+    <div class="rank-note">Everyone currently holding a High Command Team or Commissioned Office rank — Police liaison through Chief Inspector, plus Inspector and Senior Sergeant — pulled automatically from every division. This is a read-only aggregate view; use the Promote button on a row, or a division's own Add-officer row, to bring someone in.</div>
+
+    <div class="grid-scroll"><table class="grid">
+      <thead>
+        <tr>
+          <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+          <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-srcmd" type="button">▾</button>
+            <div class="filter-pop" id="rank-filter-pop-srcmd"></div>
+          </span></th>
+          <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+          <th class="colhead col-discord"><span class="letter">D</span><span class="fieldname">Division</span></th>
+          <th class="colhead col-fto"><span class="letter">E</span><span class="fieldname">FTO Status</span></th>
+          <th class="colhead col-discord"><span class="letter">F</span><span class="fieldname">Discord ID</span></th>
+          <th class="colhead col-time"><span class="letter">G</span><span class="fieldname">Inducted date<button class="filter-btn" id="time-sort-btn-srcmd" type="button">↕</button></span></th>
+          <th class="colhead col-promo"><span class="letter">H</span><span class="fieldname">Promotion officer</span></th>
+          <th class="colhead col-actions"><span class="letter">I</span><span class="fieldname">&nbsp;</span></th>
+        </tr>
+      </thead>
+      <tbody id="log-body-srcmd"></tbody>
+    </table></div>
+  `;
+  callsignsDivisionsContainer.appendChild(srcmdSheet);
+
+  const srcmdTabBtn = document.createElement('button');
+  srcmdTabBtn.className = 'unit-tab';
+  srcmdTabBtn.dataset.div = 'srcmd';
+  srcmdTabBtn.textContent = 'Senior command';
+  srcmdTabBtn.type = 'button';
+  srcmdTabBtn.addEventListener('click', () => activateCallsignDivision('srcmd'));
+  callsignsTabstripEl.appendChild(srcmdTabBtn);
+
+  DIVISION_KEYS.forEach((key, i) => {
+    const div = DIVISIONS[key];
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet' + (i === 0 ? ' active' : '');
+    sheet.id = 'sheet-' + key;
+    sheet.innerHTML = `
+      <div class="toolbar-row">
+        <span class="pill" id="entry-count-label-${key}">0 rows</span>
+        <span class="pill" id="filtered-count-pill-${key}"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="export-btn-${key}" type="button">Export .csv</button>
+      </div>
+
+      <div class="quickadd${key !== 'general' ? ' hide-entry-row' : ''}" id="entry-row-${key}">
+        ${key === 'general' ? '<div class="quickadd-title">+ New Officer Entry</div>' : ''}
+        <div class="quickadd-fields">
+          <div class="qcell">
+            <label>Callsign</label>
+            <input id="f-callsign-${key}" placeholder="SURRY21" autocomplete="off">
+          </div>
+          <div class="qcell">
+            <label>Rank</label>
+            <select id="f-rank-${key}"></select>
+          </div>
+          <div class="qcell">
+            <label>Officer name</label>
+            <input id="f-unit-${key}" placeholder="J. Smith" autocomplete="off">
+          </div>
+          <div class="qcell">
+            <label>Discord ID</label>
+            <input id="f-discord-${key}" placeholder="username" autocomplete="off">
+          </div>
+          <div class="qcell">
+            <label>Inducted date</label>
+            <input id="f-time-${key}" type="date">
+          </div>
+          <div class="qcell">
+            <label>Promotion officer</label>
+            <input id="f-promo-${key}" placeholder="J. Doe" autocomplete="off">
+          </div>
+        </div>
+        <div class="quickadd-add-row">
+          <button class="btn primary" id="add-btn-${key}" type="button">Add officer</button>
+        </div>
+      </div>
+
+      <div class="grid-scroll"><table class="grid">
+        <thead>
+          <tr>
+            <th class="colhead col-callsign"><span class="letter">A</span><span class="fieldname">Callsign</span></th>
+            <th class="colhead col-rank" title="Log is always ordered by rank, Commissioner first"><span class="letter">B</span><span class="fieldname">Rank <span style="color:var(--amber-deep); font-weight:400;">▲</span><button class="filter-btn" id="rank-filter-btn-${key}" type="button">▾</button>
+              <div class="filter-pop" id="rank-filter-pop-${key}"></div>
+            </span></th>
+            <th class="colhead col-unit"><span class="letter">C</span><span class="fieldname">Officer name</span></th>
+            <th class="colhead col-fto"><span class="letter">D</span><span class="fieldname">FTO Status</span></th>
+            <th class="colhead col-discord"><span class="letter">E</span><span class="fieldname">Discord ID</span></th>
+            <th class="colhead col-time"><span class="letter">F</span><span class="fieldname">Inducted date<button class="filter-btn" id="time-sort-btn-${key}" type="button">↕</button></span></th>
+            <th class="colhead col-promo"><span class="letter">G</span><span class="fieldname">Promotion officer</span></th>
+            <th class="colhead col-actions"><span class="letter">H</span><span class="fieldname">&nbsp;</span></th>
+          </tr>
+        </thead>
+        <tbody id="log-body-${key}"></tbody>
+      </table></div>
+    `;
+    callsignsDivisionsContainer.appendChild(sheet);
+
+    const tabBtn = document.createElement('button');
+    tabBtn.className = 'unit-tab' + (i === 0 ? ' active' : '');
+    tabBtn.dataset.div = key;
+    tabBtn.textContent = div.label;
+    tabBtn.type = 'button';
+    tabBtn.addEventListener('click', () => activateCallsignDivision(key));
+    callsignsTabstripEl.appendChild(tabBtn);
+  });
+
+  function activateCallsignDivision(divKey){
+    document.querySelectorAll('#callsigns-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === divKey));
+    document.querySelectorAll('#callsigns-divisions-container .sheet').forEach(s => s.classList.toggle('active', s.id === 'sheet-' + divKey));
+    activeCallsignDiv = divKey;
+  }
+
+  document.querySelectorAll('#academy-tabstrip .unit-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const sub = tab.dataset.sub;
+      document.querySelectorAll('#academy-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('#sheet-academy > .sheet').forEach(s => s.classList.toggle('active', s.id === 'academy-sub-' + sub));
+    });
+  });
+
+  document.querySelectorAll('#eoi-tabstrip .unit-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const sub = tab.dataset.sub;
+      document.querySelectorAll('#eoi-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('#sheet-eoi > .sheet').forEach(s => s.classList.toggle('active', s.id === 'eoi-sub-' + sub));
+      if(sub === 'review') renderEoiReview();
+    });
+  });
+
+  function activateSeniorCommandSub(sub){
+    document.querySelectorAll('#seniorcommand-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
+    document.querySelectorAll('#sheet-seniorcommand > .sheet').forEach(s => s.classList.toggle('active', s.id === 'seniorcmd-sub-' + sub));
+  }
+  document.querySelectorAll('#seniorcommand-tabstrip .unit-tab').forEach(tab => {
+    tab.addEventListener('click', () => activateSeniorCommandSub(tab.dataset.sub));
+  });
+
+  const sheettabsEl = document.getElementById('sheettabs');
+  const callsignsTabBtn = document.createElement('button');
+  callsignsTabBtn.className = 'sheettab active';
+  callsignsTabBtn.dataset.sheet = 'sheet-callsigns';
+  callsignsTabBtn.textContent = 'Callsigns';
+  sheettabsEl.appendChild(callsignsTabBtn);
+  const academyTabBtn = document.createElement('button');
+  academyTabBtn.className = 'sheettab';
+  academyTabBtn.dataset.sheet = 'sheet-academy';
+  academyTabBtn.textContent = 'Academy';
+  sheettabsEl.appendChild(academyTabBtn);
+  const eoiTabBtn = document.createElement('button');
+  eoiTabBtn.className = 'sheettab';
+  eoiTabBtn.dataset.sheet = 'sheet-eoi';
+  eoiTabBtn.textContent = 'EOIs';
+  sheettabsEl.appendChild(eoiTabBtn);
+  const terminatedTabBtn = document.createElement('button');
+  terminatedTabBtn.className = 'sheettab';
+  terminatedTabBtn.dataset.sheet = 'sheet-seniorcommand';
+  terminatedTabBtn.textContent = 'Senior Command';
+  sheettabsEl.appendChild(terminatedTabBtn);
+  const ranksTabBtn = document.createElement('button');
+  ranksTabBtn.className = 'sheettab';
+  ranksTabBtn.dataset.sheet = 'sheet-ranks';
+  ranksTabBtn.textContent = 'Ranks';
+  sheettabsEl.appendChild(ranksTabBtn);
+  const plusSpan = document.createElement('span');
+  plusSpan.className = 'plus';
+  plusSpan.textContent = '+';
+  sheettabsEl.appendChild(plusSpan);
+
+  let activeSheetId = 'sheet-callsigns';
+  function activateSheet(sheetId){
+    document.querySelectorAll('.sheettab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#sheets-container > .sheet').forEach(s => s.classList.remove('active'));
+    const tab = document.querySelector('.sheettab[data-sheet="' + sheetId + '"]');
+    if(tab) tab.classList.add('active');
+    const sheet = document.getElementById(sheetId);
+    if(sheet) sheet.classList.add('active');
+    activeSheetId = sheetId;
+    document.getElementById('cellref').textContent = 'A1';
+    document.getElementById('search-box').placeholder = sheetId === 'sheet-ranks'
+      ? 'Rank sheet — search disabled'
+      : 'Search callsign, officer name...';
+  }
+  document.querySelectorAll('.sheettab').forEach(tab => {
+    tab.addEventListener('click', () => activateSheet(tab.dataset.sheet));
+  });
+
+  const rankFilterValue = {};
+  const timeSortDir = {};
+  [...DIVISION_KEYS, 'srcmd'].forEach(k => { rankFilterValue[k] = ''; timeSortDir[k] = 'desc'; });
+
+  function buildFilterPop(divKey){
+    const div = DIVISIONS[divKey];
+    const pop = document.getElementById('rank-filter-pop-' + divKey);
+    const btn = document.getElementById('rank-filter-btn-' + divKey);
+    pop.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All ranks';
+    allBtn.className = rankFilterValue[divKey] === '' ? 'sel' : '';
+    allBtn.addEventListener('click', () => {
+      rankFilterValue[divKey] = '';
+      pop.classList.remove('open');
+      btn.classList.remove('active-filter');
+      renderDivision(divKey);
+    });
+    pop.appendChild(allBtn);
+    div.ranks.forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r;
+      b.className = rankFilterValue[divKey] === r ? 'sel' : '';
+      b.addEventListener('click', () => {
+        rankFilterValue[divKey] = r;
+        pop.classList.remove('open');
+        btn.classList.add('active-filter');
+        renderDivision(divKey);
+      });
+      pop.appendChild(b);
+    });
+  }
+
+  function renderDivision(divKey){
+    const div = DIVISIONS[divKey];
+    const entries = divKey === 'afp'
+      ? (entriesByDivision[divKey] || []).filter(e => e.rank === 'Department Of Justice')
+      : (entriesByDivision[divKey] || []);
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+
+    let filtered = entries
+      .filter(e => !rankFilterValue[divKey] || e.rank === rankFilterValue[divKey])
+      .filter(e => !q || (e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q));
+
+    filtered = filtered.sort((a,b) => {
+      const rankCmp = (RANK_ORDER[a.rank] ?? 999) - (RANK_ORDER[b.rank] ?? 999);
+      if(rankCmp !== 0) return rankCmp;
+      const cmp = (a.time||'').localeCompare(b.time||'') || a.created - b.created;
+      return timeSortDir[divKey] === 'desc' ? -cmp : cmp;
+    });
+
+    document.getElementById('entry-count-label-' + divKey).textContent = entries.length + (entries.length === 1 ? ' row' : ' rows');
+    document.getElementById('filtered-count-pill-' + divKey).textContent = (filtered.length !== entries.length) ? ('(' + filtered.length + ' shown)') : '';
+
+    const body = document.getElementById('log-body-' + divKey);
+    body.innerHTML = '';
+
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="8">${entries.length === 0 ? 'No rows yet — fill in the entry bar above and press Add.' : 'No rows match this search / filter.'}</td>`;
+      body.appendChild(tr);
+      return;
+    }
+
+    const p = currentUser.perms || {};
+    const editInfo = p.canEditOfficerInfo;
+    filtered.forEach(e => {
+      const canPromoteThis = p.canPromoteAny || (e.rank === 'student' && p.canPromoteStudent);
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.setAttribute('data-row-id', e.id);
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit${editInfo ? ' editable-cell' : ''}" data-field="unit">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-fto">${escapeHtml(e.fto || '—')}</td>
+        <td class="cell-discord${editInfo ? ' editable-cell' : ''}" data-field="discord">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
+        <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
+        <td class="cell-actions">${canPromoteThis ? `<button class="row-promote" data-id="${e.id}" type="button" title="Promote / transfer">↑</button>` : ''}${p.canSetFto ? `<button class="row-fto" data-id="${e.id}" type="button" title="Set FTO status">FTO</button>` : ''}${p.canTerminate ? `<button class="row-terminate" data-id="${e.id}" type="button" title="Terminate officer">⛔</button>` : ''}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+  function renderAllDivisions(){ DIVISION_KEYS.forEach(renderDivision); }
+
+  function getSeniorCommandRows(){
+    const rows = [];
+    (entriesByDivision.shared || []).forEach(e => {
+      rows.push({ entry: e, divKey: 'srcmd', divLabel: 'High Command' });
+    });
+    ['general', 'highway', 'tou', 'crime'].forEach(k => {
+      (entriesByDivision[k] || []).forEach(e => {
+        if(e.rank === 'Inspector' || e.rank === 'Senior Sergeant'){
+          rows.push({ entry: e, divKey: k, divLabel: DIVISIONS[k].label });
+        }
+      });
+    });
+    return rows;
+  }
+
+  function buildSeniorCommandFilterPop(){
+    const pop = document.getElementById('rank-filter-pop-srcmd');
+    const btn = document.getElementById('rank-filter-btn-srcmd');
+    pop.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All ranks';
+    allBtn.className = rankFilterValue['srcmd'] === '' ? 'sel' : '';
+    allBtn.addEventListener('click', () => {
+      rankFilterValue['srcmd'] = '';
+      pop.classList.remove('open');
+      btn.classList.remove('active-filter');
+      renderSeniorCommand();
+    });
+    pop.appendChild(allBtn);
+    SENIOR_COMMAND_RANKS.forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r;
+      b.className = rankFilterValue['srcmd'] === r ? 'sel' : '';
+      b.addEventListener('click', () => {
+        rankFilterValue['srcmd'] = r;
+        pop.classList.remove('open');
+        btn.classList.add('active-filter');
+        renderSeniorCommand();
+      });
+      pop.appendChild(b);
+    });
+  }
+
+  function renderSeniorCommand(){
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    const allRows = getSeniorCommandRows();
+    let filtered = allRows
+      .filter(r => !rankFilterValue['srcmd'] || r.entry.rank === rankFilterValue['srcmd'])
+      .filter(r => !q || (r.entry.callsign + ' ' + (r.entry.unit||'')).toLowerCase().includes(q));
+
+    filtered = filtered.sort((a,b) => {
+      const rankCmp = (RANK_ORDER[a.entry.rank] ?? 999) - (RANK_ORDER[b.entry.rank] ?? 999);
+      if(rankCmp !== 0) return rankCmp;
+      const cmp = (a.entry.time||'').localeCompare(b.entry.time||'') || a.entry.created - b.entry.created;
+      return timeSortDir['srcmd'] === 'desc' ? -cmp : cmp;
+    });
+
+    document.getElementById('entry-count-label-srcmd').textContent = allRows.length + (allRows.length === 1 ? ' row' : ' rows');
+    document.getElementById('filtered-count-pill-srcmd').textContent = (filtered.length !== allRows.length) ? ('(' + filtered.length + ' shown)') : '';
+
+    const body = document.getElementById('log-body-srcmd');
+    body.innerHTML = '';
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="9">${allRows.length === 0 ? 'No rows yet.' : 'No rows match this search / filter.'}</td>`;
+      body.appendChild(tr);
+      return;
+    }
+
+    const p = currentUser.perms || {};
+    const editInfo = p.canEditOfficerInfo;
+    filtered.forEach(r => {
+      const e = r.entry;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.setAttribute('data-row-id', e.id);
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit${editInfo ? ' editable-cell' : ''}" data-field="unit" data-div="${r.divKey}">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-discord">${escapeHtml(r.divLabel)}</td>
+        <td class="cell-fto">${escapeHtml(e.fto || '—')}</td>
+        <td class="cell-discord${editInfo ? ' editable-cell' : ''}" data-field="discord" data-div="${r.divKey}">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
+        <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
+        <td class="cell-actions">${p.canPromoteAny ? `<button class="row-promote" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Promote / transfer">↑</button>` : ''}${p.canSetFto ? `<button class="row-fto" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Set FTO status">FTO</button>` : ''}${p.canTerminate ? `<button class="row-terminate" data-id="${e.id}" data-div="${r.divKey}" type="button" title="Terminate officer">⛔</button>` : ''}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('rank-filter-btn-srcmd').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    document.querySelectorAll('.filter-pop.open').forEach(p => { if(p.id !== 'rank-filter-pop-srcmd') p.classList.remove('open'); });
+    buildSeniorCommandFilterPop();
+    document.getElementById('rank-filter-pop-srcmd').classList.toggle('open');
+  });
+  document.getElementById('time-sort-btn-srcmd').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    timeSortDir['srcmd'] = timeSortDir['srcmd'] === 'desc' ? 'asc' : 'desc';
+    renderSeniorCommand();
+  });
+  document.getElementById('log-body-srcmd').addEventListener('click', (ev) => {
+    const editableCell = ev.target.closest('td.editable-cell');
+    if(editableCell && !editableCell.querySelector('input')){
+      const tr = editableCell.closest('tr[data-row-id]');
+      if(tr) startInlineEdit(editableCell, editableCell.dataset.div, tr.getAttribute('data-row-id'), editableCell.dataset.field);
+      return;
+    }
+    const promoteBtn = ev.target.closest('button.row-promote');
+    if(promoteBtn){
+      openPromotePop(promoteBtn, promoteBtn.getAttribute('data-div'), promoteBtn.getAttribute('data-id'), 'Promote / transfer');
+      return;
+    }
+    const ftoBtn = ev.target.closest('button.row-fto');
+    if(ftoBtn){
+      openFtoPop(ftoBtn, ftoBtn.getAttribute('data-div'), ftoBtn.getAttribute('data-id'));
+      return;
+    }
+    const terminateBtn = ev.target.closest('button.row-terminate');
+    if(terminateBtn){
+      terminateOfficer(terminateBtn.getAttribute('data-div'), terminateBtn.getAttribute('data-id'));
+      return;
+    }
+  });
+  document.getElementById('export-btn-srcmd').addEventListener('click', () => {
+    const rows0 = getSeniorCommandRows();
+    if(rows0.length === 0) return;
+    const header = ['Callsign','Rank','Officer name','Division','FTO Status','Discord ID','Inducted date','Promotion officer'];
+    const rows = rows0.slice().sort((a,b) => (a.entry.time||'').localeCompare(b.entry.time||''))
+      .map(r => [r.entry.callsign, r.entry.rank, r.entry.unit, r.divLabel, r.entry.fto, r.entry.discord, r.entry.time, r.entry.promo]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'callsign-log-seniorcommand.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  function startInlineEdit(cellEl, divKey, id, field){
+    if(cellEl.querySelector('input')) return;
+    const found = findEntry(divKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    const currentValue = entry[field] || '';
+    cellEl.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentValue;
+    input.style.cssText = 'width:100%; box-sizing:border-box; font-family:inherit; font-size:inherit; border:1px solid var(--amber); border-radius:4px; padding:2px 4px; background:var(--headbg); color:var(--ink);';
+    cellEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    let settled = false;
+    const save = async () => {
+      if(settled) return;
+      settled = true;
+      const newValue = input.value.trim();
+      if(newValue !== currentValue){
+        await apiPost('/api/officers/edit-info', { id, field, value: newValue });
+        await reloadAll();
+      } else {
+        cellEl.textContent = currentValue || '—';
+      }
+    };
+    const cancel = () => {
+      if(settled) return;
+      settled = true;
+      cellEl.textContent = currentValue || '—';
+    };
+    input.addEventListener('keydown', (kev) => {
+      if(kev.key === 'Enter'){ kev.preventDefault(); save(); }
+      else if(kev.key === 'Escape'){ kev.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', () => { save(); });
+  }
+
+  async function addEntry(divKey){
+    const callsignField = document.getElementById('f-callsign-' + divKey);
+    const rankField = document.getElementById('f-rank-' + divKey);
+    const unitField = document.getElementById('f-unit-' + divKey);
+    const discordField = document.getElementById('f-discord-' + divKey);
+    const promoField = document.getElementById('f-promo-' + divKey);
+    const timeField = document.getElementById('f-time-' + divKey);
+    const callsign = callsignField.value.trim();
+    if(!callsign) return;
+    const entry = {
+      id: 'e' + Date.now() + Math.random().toString(36).slice(2,7),
+      callsign: callsign.toUpperCase(),
+      rank: rankField.value,
+      unit: unitField.value.trim(),
+      discord: discordField.value.trim(),
+      promo: promoField.value.trim(),
+      time: timeField.value || todayStr(),
+      fto: '',
+      created: Date.now()
+    };
+    const rankVal = rankField.value;
+    unitField.value = '';
+    discordField.value = '';
+    promoField.value = '';
+    timeField.value = '';
+    callsignField.focus();
+    callsignField.select();
+    await apiPost('/api/officers/add', { ...entry, list_key: listKeyFor(divKey, entry.rank), divisionLabel: announceDivisionLabel(entry.rank, listKeyFor(divKey, entry.rank)) });
+    await reloadAll();
+    callsignField.value = nextCallsignForRank(divKey, rankVal);
+  }
+
+  DIVISION_KEYS.forEach(key => {
+    const div = DIVISIONS[key];
+    const rankSelect = document.getElementById('f-rank-' + key);
+    div.ranks.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r;
+      rankSelect.appendChild(opt);
+    });
+
+    rankSelect.addEventListener('change', () => {
+      const callsignField = document.getElementById('f-callsign-' + key);
+      const suggestion = nextCallsignForRank(key, rankSelect.value);
+      if(suggestion) callsignField.value = suggestion;
+    });
+
+    const rankFilterBtn = document.getElementById('rank-filter-btn-' + key);
+    rankFilterBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      document.querySelectorAll('.filter-pop.open').forEach(p => { if(p.id !== 'rank-filter-pop-' + key) p.classList.remove('open'); });
+      buildFilterPop(key);
+      document.getElementById('rank-filter-pop-' + key).classList.toggle('open');
+    });
+
+    document.getElementById('time-sort-btn-' + key).addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      timeSortDir[key] = timeSortDir[key] === 'desc' ? 'asc' : 'desc';
+      renderDivision(key);
+    });
+
+    document.getElementById('add-btn-' + key).addEventListener('click', () => addEntry(key));
+    document.getElementById('entry-row-' + key).addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); addEntry(key); }
+    });
+
+    document.getElementById('log-body-' + key).addEventListener('click', (ev) => {
+      const editableCell = ev.target.closest('td.editable-cell');
+      if(editableCell && !editableCell.querySelector('input')){
+        const tr = editableCell.closest('tr[data-row-id]');
+        if(tr) startInlineEdit(editableCell, key, tr.getAttribute('data-row-id'), editableCell.dataset.field);
+        return;
+      }
+      const promoteBtn = ev.target.closest('button.row-promote');
+      if(promoteBtn){
+        openPromotePop(promoteBtn, key, promoteBtn.getAttribute('data-id'), 'Promote / transfer');
+        return;
+      }
+      const ftoBtn = ev.target.closest('button.row-fto');
+      if(ftoBtn){
+        openFtoPop(ftoBtn, key, ftoBtn.getAttribute('data-id'));
+        return;
+      }
+      const terminateBtn = ev.target.closest('button.row-terminate');
+      if(terminateBtn){
+        terminateOfficer(key, terminateBtn.getAttribute('data-id'));
+        return;
+      }
+    });
+
+    document.getElementById('export-btn-' + key).addEventListener('click', () => {
+      const entries = key === 'afp'
+        ? (entriesByDivision[key] || []).filter(e => e.rank === 'Department Of Justice')
+        : (entriesByDivision[key] || []);
+      if(entries.length === 0) return;
+      const header = ['Callsign','Rank','Officer name','FTO Status','Discord ID','Inducted date','Promotion officer'];
+      const rows = entries.slice().sort((a,b) => (a.time||'').localeCompare(b.time||''))
+        .map(e => [e.callsign, e.rank, e.unit, e.fto, e.discord, e.time, e.promo]);
+      const csv = [header, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'callsign-log-' + key + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('f-callsign-' + key).value = nextCallsignForRank(key, rankSelect.value);
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pop.open').forEach(p => p.classList.remove('open'));
+  });
+
+  document.getElementById('search-box').addEventListener('input', () => {
+    renderAllDivisions();
+    renderSeniorCommand();
+    renderTerminated();
+    renderAcademy();
+      renderStudentChecklist();
+    renderSearchDropdown();
+  });
+
+  const searchBoxEl = document.getElementById('search-box');
+  const searchDropdownEl = document.getElementById('search-dropdown');
+
+  function getSearchMatches(q){
+    if(!q) return [];
+    const out = [];
+    (entriesByDivision.shared || []).forEach(e => {
+      if((e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q)) out.push({ entry: e, divKey: 'srcmd' });
+    });
+    DIVISION_KEYS.forEach(k => {
+      (entriesByDivision[k] || []).forEach(e => {
+        if((e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q)) out.push({ entry: e, divKey: k });
+      });
+    });
+    return out.slice(0, 8);
+  }
+
+  function renderSearchDropdown(){
+    const q = searchBoxEl.value.trim().toLowerCase();
+    if(!q){ searchDropdownEl.classList.remove('open'); searchDropdownEl.innerHTML = ''; return; }
+    const matches = getSearchMatches(q);
+    searchDropdownEl.innerHTML = '';
+    if(matches.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'search-dropdown-empty';
+      empty.textContent = 'No matches.';
+      searchDropdownEl.appendChild(empty);
+    } else {
+      matches.forEach(m => {
+        const targetKey = m.divKey;
+        const targetLabel = targetKey === 'srcmd' ? 'Senior command' : DIVISIONS[targetKey].label;
+        const div = document.createElement('div');
+        div.className = 'search-dropdown-item';
+        div.innerHTML = `<span class="sdi-name">${escapeHtml(m.entry.unit || m.entry.callsign)}</span><span class="sdi-meta">${escapeHtml(m.entry.rank)} · ${escapeHtml(m.entry.callsign)} · ${escapeHtml(targetLabel)}</span>`;
+        div.addEventListener('click', () => goToSearchResult(targetKey, m.entry.id));
+        searchDropdownEl.appendChild(div);
+      });
+    }
+    searchDropdownEl.classList.add('open');
+  }
+
+  function goToSearchResult(divKey, id){
+    searchBoxEl.value = '';
+    searchDropdownEl.classList.remove('open');
+    searchDropdownEl.innerHTML = '';
+    renderAllDivisions();
+    renderSeniorCommand();
+    activateSheet('sheet-callsigns');
+    activateCallsignDivision(divKey);
+    requestAnimationFrame(() => {
+      const row = document.querySelector('#log-body-' + divKey + ' tr[data-row-id="' + id + '"]');
+      if(row){
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('row-flash');
+        setTimeout(() => row.classList.remove('row-flash'), 1800);
+      }
+    });
+  }
+
+  searchBoxEl.addEventListener('focus', () => { if(searchBoxEl.value.trim()) renderSearchDropdown(); });
+  document.addEventListener('click', (ev) => {
+    if(!ev.target.closest('.formulabar')) searchDropdownEl.classList.remove('open');
+  });
+
+  const promotePopEl = document.getElementById('promote-pop');
+  const promoteDivisionSelect = document.getElementById('promote-division-select');
+  const promoteRankSelect = document.getElementById('promote-rank-select');
+  DIVISION_KEYS.forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = DIVISIONS[k].label;
+    promoteDivisionSelect.appendChild(opt);
+  });
+  const srcmdPromoteOpt = document.createElement('option');
+  srcmdPromoteOpt.value = 'srcmd';
+  srcmdPromoteOpt.textContent = 'Senior command';
+  promoteDivisionSelect.appendChild(srcmdPromoteOpt);
+
+  let promoteTarget = null;
+
+  function populatePromoteRanks(divKey, selectedRank){
+    promoteRankSelect.innerHTML = '';
+    const ranks = divKey === 'srcmd' ? EXEC_RANKS : DIVISIONS[divKey].ranks;
+    ranks.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r;
+      if(r === selectedRank) opt.selected = true;
+      promoteRankSelect.appendChild(opt);
+    });
+  }
+
+  function openPromotePop(btnEl, currentDivKey, id, label){
+    const found = findEntry(currentDivKey, id);
+    if(!found) return;
+    const entry = entriesByDivision[found.listKey][found.idx];
+    promoteTarget = { currentDivKey, id };
+    const defaultDivKey = (DIVISION_KEYS.includes(currentDivKey) || currentDivKey === 'srcmd') ? currentDivKey : DIVISION_KEYS[0];
+    promoteDivisionSelect.value = defaultDivKey;
+    const defaultDivRanks = defaultDivKey === 'srcmd' ? EXEC_RANKS : DIVISIONS[defaultDivKey].ranks;
+    const preselectRank = defaultDivRanks.includes(entry.rank) ? entry.rank : null;
+    populatePromoteRanks(defaultDivKey, preselectRank);
+    document.querySelector('.promote-pop-head').textContent = label || 'Promote / transfer';
+
+    const rect = btnEl.getBoundingClientRect();
+    promotePopEl.style.top = Math.min(rect.bottom + 6, window.innerHeight - 260) + 'px';
+    promotePopEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 246)) + 'px';
+    promotePopEl.classList.add('open');
+  }
+  function closePromotePop(){
+    promotePopEl.classList.remove('open');
+    promoteTarget = null;
+  }
+
+  promoteDivisionSelect.addEventListener('change', () => {
+    populatePromoteRanks(promoteDivisionSelect.value, null);
+  });
+
+  document.getElementById('promote-cancel-btn').addEventListener('click', closePromotePop);
+
+  document.getElementById('promote-confirm-btn').addEventListener('click', async () => {
+    if(!promoteTarget) return;
+    const { currentDivKey, id } = promoteTarget;
+    const found = findEntry(currentDivKey, id);
+    if(!found) { closePromotePop(); return; }
+    const entry = entriesByDivision[found.listKey][found.idx];
+    const newDivKey = promoteDivisionSelect.value;
+    const newRank = promoteRankSelect.value;
+    const oldRank = entry.rank;
+    const oldListKey = found.listKey;
+
+    const suggestion = nextCallsignForRank(newDivKey, newRank);
+    const newCallsign = suggestion || entry.callsign;
+    const newTime = found.listKey === 'terminated' ? todayStr() : entry.time;
+    const newListKey = listKeyFor(newDivKey, newRank);
+
+    closePromotePop();
+    const changed = (oldRank !== newRank || oldListKey !== newListKey);
+    await apiPost('/api/officers/promote', {
+      id: entry.id,
+      currentRank: oldRank,
+      listKey: newListKey,
+      callsign: newCallsign,
+      rank: newRank,
+      time: newTime,
+      toDivisionLabel: announceDivisionLabel(newRank, newListKey),
+      logEntry: changed ? {
+        id: 'p' + Date.now() + Math.random().toString(36).slice(2,7),
+        name: entry.unit || entry.callsign,
+        callsign: newCallsign,
+        from_rank: oldRank,
+        from_division: divisionLabelFor(oldListKey),
+        to_rank: newRank,
+        to_division: divisionLabelFor(newListKey),
+        date: todayStr(),
+        created: Date.now()
+      } : null
+    });
+    await reloadAll();
+
+    activateSheet('sheet-callsigns');
+    activateCallsignDivision(newDivKey);
+    requestAnimationFrame(() => {
+      const row = document.querySelector('#log-body-' + newDivKey + ' tr[data-row-id="' + entry.id + '"]');
+      if(row){
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('row-flash');
+        setTimeout(() => row.classList.remove('row-flash'), 1800);
+      }
+    });
+  });
+
+  document.addEventListener('click', (ev) => {
+    if(promotePopEl.classList.contains('open') && !ev.target.closest('.promote-pop') && !ev.target.closest('.row-promote')){
+      closePromotePop();
+    }
+  });
+  window.addEventListener('scroll', () => { if(promotePopEl.classList.contains('open')) closePromotePop(); }, true);
+
+  let terminatedSortDir = 'desc';
+  let terminatedRankFilter = '';
+  const termRankFilterPop = document.getElementById('rank-filter-pop-terminated');
+  const termRankFilterBtn = document.getElementById('rank-filter-btn-terminated');
+  function buildTerminatedFilterPop(){
+    termRankFilterPop.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All ranks';
+    allBtn.className = terminatedRankFilter === '' ? 'sel' : '';
+    allBtn.addEventListener('click', () => {
+      terminatedRankFilter = '';
+      termRankFilterPop.classList.remove('open');
+      termRankFilterBtn.classList.remove('active-filter');
+      renderTerminated();
+    });
+    termRankFilterPop.appendChild(allBtn);
+    RANKS.forEach(r => {
+      const b = document.createElement('button');
+      b.textContent = r;
+      b.className = terminatedRankFilter === r ? 'sel' : '';
+      b.addEventListener('click', () => {
+        terminatedRankFilter = r;
+        termRankFilterPop.classList.remove('open');
+        termRankFilterBtn.classList.add('active-filter');
+        renderTerminated();
+      });
+      termRankFilterPop.appendChild(b);
+    });
+  }
+  termRankFilterBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    document.querySelectorAll('.filter-pop.open').forEach(p => { if(p !== termRankFilterPop) p.classList.remove('open'); });
+    buildTerminatedFilterPop();
+    termRankFilterPop.classList.toggle('open');
+  });
+
+  function renderTerminated(){
+    const entries = entriesByDivision.terminated || [];
+    const q = document.getElementById('search-box').value.trim().toLowerCase();
+    let filtered = entries
+      .filter(e => !terminatedRankFilter || e.rank === terminatedRankFilter)
+      .filter(e => !q || (e.callsign + ' ' + (e.unit||'')).toLowerCase().includes(q));
+    filtered = filtered.sort((a,b) => {
+      const rankCmp = (RANK_ORDER[a.rank] ?? 999) - (RANK_ORDER[b.rank] ?? 999);
+      if(rankCmp !== 0) return rankCmp;
+      const cmp = (a.time||'').localeCompare(b.time||'') || a.created - b.created;
+      return terminatedSortDir === 'desc' ? -cmp : cmp;
+    });
+
+    document.getElementById('entry-count-label-terminated').textContent = entries.length + (entries.length === 1 ? ' row' : ' rows');
+    document.getElementById('filtered-count-pill-terminated').textContent = (filtered.length !== entries.length) ? ('(' + filtered.length + ' shown)') : '';
+
+    const body = document.getElementById('log-body-terminated');
+    body.innerHTML = '';
+    if(filtered.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="7">${entries.length === 0 ? 'No rows yet.' : 'No rows match this search / filter.'}</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    filtered.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.setAttribute('data-row-id', e.id);
+      tr.innerHTML = `
+        <td class="cell-callsign">${escapeHtml(e.callsign)}</td>
+        <td class="cell-rank">${rankBadgeHtml(e.rank)}</td>
+        <td class="cell-unit">${escapeHtml(e.unit || '—')}</td>
+        <td class="cell-discord">${escapeHtml(e.discord || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(e.time))}</span></td>
+        <td class="cell-promo"><span class="cell-promo-text">${escapeHtml(e.promo || '—')}</span></td>
+        <td class="cell-notes">${escapeHtml(e.notes || '—')}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function renderPromotionLogs(){
+    document.getElementById('entry-count-label-promotions').textContent = promotionLog.length + (promotionLog.length === 1 ? ' row' : ' rows');
+    const body = document.getElementById('log-body-promotions');
+    body.innerHTML = '';
+    if(promotionLog.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="5">No promotions logged yet — they'll appear here automatically.</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    const sorted = promotionLog.slice().sort((a, b) => b.created - a.created);
+    sorted.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="cell-unit">${escapeHtml(p.name)} <span style="color:var(--sub); font-size:0.7rem;">(${escapeHtml(p.callsign || '')})</span></td>
+        <td class="cell-unit">${escapeHtml(p.fromRank)} — ${escapeHtml(p.fromDivision)}</td>
+        <td class="cell-promo">${escapeHtml(p.toRank)} — ${escapeHtml(p.toDivision)}</td>
+        <td class="cell-unit">${escapeHtml(p.promotedBy || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(p.date))}</span></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('time-sort-btn-terminated').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    terminatedSortDir = terminatedSortDir === 'desc' ? 'asc' : 'desc';
+    renderTerminated();
+  });
+  document.getElementById('export-btn-terminated').addEventListener('click', () => {
+    const entries = entriesByDivision.terminated || [];
+    if(entries.length === 0) return;
+    const header = ['Callsign','Rank','Officer name','Discord ID','Termination date','Terminating officer','Notes'];
+    const rows = entries.slice().sort((a,b) => (a.time||'').localeCompare(b.time||''))
+      .map(e => [e.callsign, e.rank, e.unit, e.discord, e.time, e.promo, e.notes]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'callsign-log-terminated.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  let eoiCatalogue = [];
+  let eoiCatalogueByKey = {};
+  let myApplications = [];
+  let pendingApplications = [];
+
+  async function loadEoiCatalogue(){
+    try{
+      const res = await fetch('/api/eoi/actions');
+      const data = await res.json();
+      eoiCatalogue = data.certifications || [];
+      eoiCatalogueByKey = Object.fromEntries(eoiCatalogue.map(c => [c.key, c]));
+    }catch(e){
+      console.error('Could not load EOI catalogue', e);
+      eoiCatalogue = [];
+      eoiCatalogueByKey = {};
+    }
+    renderEoiCertList();
+    renderMyApplications();
+    renderEoiReview();
+  }
+
+  function renderEoiCertList(){
+    const container = document.getElementById('eoi-cert-list');
+    if(!container) return;
+    container.innerHTML = '';
+    if(eoiCatalogue.length === 0){
+      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">No certifications currently open.</div>';
+      return;
+    }
+    eoiCatalogue.forEach(cert => {
+      const card = document.createElement('div');
+      card.className = 'eoi-cert-card';
+      card.innerHTML = `
+        <div class="eoi-cert-title">${escapeHtml(cert.label)}</div>
+        <div class="eoi-cert-rank">${escapeHtml(cert.minRankNote || '')}</div>
+        <button class="btn primary" type="button">Apply</button>
+      `;
+      card.querySelector('button').addEventListener('click', () => openEoiApplyModal(cert.key));
+      container.appendChild(card);
+    });
+  }
+
+  const eoiApplyOverlayEl = document.getElementById('eoi-apply-overlay');
+  const eoiApplyTitleEl = document.getElementById('eoi-apply-title');
+  const eoiApplySubEl = document.getElementById('eoi-apply-sub');
+  const eoiApplyQuestionsEl = document.getElementById('eoi-apply-questions');
+  let eoiApplyCertKey = null;
+
+  function openEoiApplyModal(certKey){
+    const cert = eoiCatalogueByKey[certKey];
+    if(!cert) return;
+    eoiApplyCertKey = certKey;
+    eoiApplyTitleEl.textContent = cert.label;
+    eoiApplySubEl.textContent = cert.minRankNote || '';
+    eoiApplyQuestionsEl.innerHTML = '';
+    cert.questions.forEach(q => {
+      const wrap = document.createElement('div');
+      wrap.className = 'eoi-question';
+      const label = document.createElement('label');
+      label.textContent = q.label + (q.required ? '' : ' (optional)');
+      const textarea = document.createElement('textarea');
+      textarea.dataset.qid = q.id;
+      textarea.rows = q.style === 'short' ? 1 : 3;
+      wrap.appendChild(label);
+      wrap.appendChild(textarea);
+      eoiApplyQuestionsEl.appendChild(wrap);
+    });
+    eoiApplyOverlayEl.classList.add('open');
+  }
+  function closeEoiApplyModal(){
+    eoiApplyOverlayEl.classList.remove('open');
+    eoiApplyCertKey = null;
+  }
+  document.getElementById('eoi-apply-close-btn').addEventListener('click', closeEoiApplyModal);
+  document.getElementById('eoi-apply-cancel-btn').addEventListener('click', closeEoiApplyModal);
+  eoiApplyOverlayEl.addEventListener('click', (ev) => { if(ev.target === eoiApplyOverlayEl) closeEoiApplyModal(); });
+
+  document.getElementById('eoi-apply-submit-btn').addEventListener('click', async () => {
+    if(!eoiApplyCertKey) return;
+    const certKey = eoiApplyCertKey;
+    const answers = {};
+    eoiApplyQuestionsEl.querySelectorAll('textarea').forEach(t => { answers[t.dataset.qid] = t.value.trim(); });
+    await apiPost('/api/eoi/actions', { action: 'apply', certKey, answers });
+    closeEoiApplyModal();
+    await loadMyApplications();
+  });
+
+  async function loadMyApplications(){
+    if(!currentUser.loggedIn || !currentUser.id){ myApplications = []; renderMyApplications(); return; }
+    const { data, error } = await sb.from('eoi_applications').select('*').eq('applicant_id', currentUser.id).order('created', { ascending: false });
+    if(error){ console.error('Could not load my applications', error); return; }
+    myApplications = data || [];
+    renderMyApplications();
+  }
+  function renderMyApplications(){
+    const container = document.getElementById('eoi-my-applications');
+    if(!container) return;
+    if(!currentUser.loggedIn){
+      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">Log in to apply and see your applications.</div>';
+      return;
+    }
+    if(myApplications.length === 0){
+      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">You haven\u2019t applied for anything yet.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    myApplications.forEach(app => {
+      const cert = eoiCatalogueByKey[app.cert_key];
+      const label = cert ? cert.label : app.cert_key;
+      const card = document.createElement('div');
+      card.className = 'eoi-app-card';
+      card.innerHTML = `
+        <div class="eoi-app-head">
+          <span class="eoi-app-title">${escapeHtml(label)}</span>
+          <span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span>
+        </div>
+        <div class="eoi-app-meta">Applied ${escapeHtml(fmtTime(new Date(app.created).toISOString()))}${app.reviewed_by ? ' · Reviewed by ' + escapeHtml(app.reviewed_by) : ''}</div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  async function loadPendingApplications(){
+    const { data, error } = await sb.from('eoi_applications').select('*').eq('status', 'pending').order('created', { ascending: true });
+    if(error){ console.error('Could not load pending applications', error); return; }
+    pendingApplications = data || [];
+    renderEoiReview();
+  }
+  function renderEoiReview(){
+    const container = document.getElementById('eoi-review-list');
+    const countLabel = document.getElementById('eoi-pending-count-label');
+    if(!container) return;
+    if(countLabel) countLabel.textContent = pendingApplications.length + (pendingApplications.length === 1 ? ' pending' : ' pending');
+    container.innerHTML = '';
+    if(pendingApplications.length === 0){
+      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">No pending applications.</div>';
+      return;
+    }
+    pendingApplications.forEach(app => {
+      const cert = eoiCatalogueByKey[app.cert_key];
+      const label = cert ? cert.label : app.cert_key;
+      const qaHtml = (cert ? cert.questions : []).map(q => `
+        <div class="eoi-qa">
+          <div class="eoi-qa-q">${escapeHtml(q.label)}</div>
+          <div class="eoi-qa-a">${escapeHtml((app.answers && app.answers[q.id]) || '—')}</div>
+        </div>
+      `).join('');
+      const card = document.createElement('div');
+      card.className = 'eoi-app-card';
+      card.setAttribute('data-app-id', app.id);
+      card.innerHTML = `
+        <div class="eoi-app-head">
+          <span class="eoi-app-title">${escapeHtml(label)} — ${escapeHtml(app.applicant_name)}</span>
+          <span class="eoi-app-meta">Applied ${escapeHtml(fmtTime(new Date(app.created).toISOString()))}</span>
+        </div>
+        ${qaHtml}
+        <div class="eoi-app-actions">
+          <button class="btn primary" data-decision="accept" data-id="${app.id}" type="button">Accept</button>
+          <button class="btn danger" data-decision="deny" data-id="${app.id}" type="button" style="padding:7px 14px; font-size:0.75rem;">Deny</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    applyPendingEoiDeepLink();
+  }
+  document.getElementById('eoi-review-list').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('button[data-decision]');
+    if(!btn) return;
+    const applicationId = btn.getAttribute('data-id');
+    const decision = btn.getAttribute('data-decision');
+    btn.disabled = true;
+    await apiPost('/api/eoi/actions', { action: 'review', applicationId, decision });
+    await loadPendingApplications();
+    await loadEoiLog();
+  });
+
+  let eoiLog = [];
+  async function loadEoiLog(){
+    const { data, error } = await sb.from('eoi_applications')
+      .select('id,cert_key,applicant_name,status,reviewed_by,created')
+      .order('created', { ascending: false });
+    if(error){ console.error('Could not load applications log', error); return; }
+    eoiLog = data || [];
+    renderEoiLog();
+  }
+  function renderEoiLog(){
+    const body = document.getElementById('log-body-eoi-log');
+    const countLabel = document.getElementById('entry-count-label-eoi-log');
+    if(!body) return;
+    if(countLabel) countLabel.textContent = eoiLog.length + (eoiLog.length === 1 ? ' row' : ' rows');
+    body.innerHTML = '';
+    if(eoiLog.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="5">No applications logged yet — they'll appear here automatically.</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    eoiLog.forEach(app => {
+      const cert = eoiCatalogueByKey[app.cert_key];
+      const label = cert ? cert.label : app.cert_key;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="cell-unit">${escapeHtml(app.applicant_name)}</td>
+        <td class="cell-unit">${escapeHtml(label)}</td>
+        <td class="cell-promo"><span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></td>
+        <td class="cell-promo">${escapeHtml(app.reviewed_by || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(new Date(app.created).toISOString()))}</span></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  let pendingDeepLinkAppId = null;
+  function initEoiDeepLink(){
+    const params = new URLSearchParams(window.location.search);
+    const appId = params.get('eoiApp');
+    if(!appId) return;
+    pendingDeepLinkAppId = appId;
+    activateSheet('sheet-eoi');
+    const reviewTabBtn = document.getElementById('eoi-review-tab-btn');
+    if(reviewTabBtn && reviewTabBtn.style.display !== 'none') reviewTabBtn.click();
+  }
+  function applyPendingEoiDeepLink(){
+    if(!pendingDeepLinkAppId) return;
+    const card = document.querySelector('.eoi-app-card[data-app-id="' + pendingDeepLinkAppId + '"]');
+    if(!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('eoi-card-flash');
+    setTimeout(() => card.classList.remove('eoi-card-flash'), 2200);
+    pendingDeepLinkAppId = null;
+  }
+
+  function renderRankGrid(){
+    const body = document.getElementById('rank-body');
+    body.innerHTML = '';
+    RANKS.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="rk-no">${i+1}</td><td>${rankBadgeHtml(r)}</td>`;
+      body.appendChild(tr);
+    });
+  }
+  renderRankGrid();
+
+  loadAuth().then(async () => {
+    await reloadAll();
+    await loadEoiCatalogue();
+    await loadMyApplications();
+    initEoiDeepLink();
+    await loadPendingApplications();
+    await loadEoiLog();
+  });
+  sb.channel('officers-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'officers' }, () => { reloadAll(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_log' }, () => { reloadAll(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'eoi_applications' }, () => { loadMyApplications(); loadPendingApplications(); loadEoiLog(); })
+    .subscribe();
+})();
+</script>
 </body>
 </html>
