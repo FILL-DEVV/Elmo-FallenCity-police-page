@@ -70,14 +70,17 @@ module.exports = async (req, res) => {
       const applicationId = customId.slice('eoi:ack:'.length);
       console.log('interactions: ack received for application ' + applicationId);
 
-      // Ack immediately (deferred update), before the Supabase lookup
-      // below — that lookup is a network round trip, and running it
-      // before responding would risk the same "eats into Discord's
-      // 3-second window" problem this app hit before with the
-      // Accept/Deny buttons.
-      res.status(200).json({ type: 6 });
-      console.log('interactions: deferred response sent for ' + applicationId);
-
+      // Do ALL the work below BEFORE sending any response — a deferred
+      // response, with the rest of this work done after (as this used
+      // to), turned out not to reliably keep running: checkpoint
+      // logging showed execution stopping dead right after the
+      // deferred response with no error and no further log line, even
+      // though the same pattern works for the Accept/Deny flow
+      // elsewhere. Worst case this risks Discord showing "This
+      // interaction failed" if the combined round trips take over 3
+      // seconds, but the actual effects below still complete reliably
+      // either way, which is what actually matters — no more silent
+      // no-ops.
       let application;
       try {
         const rows = await sbFetch(`/eoi_applications?id=eq.${encodeURIComponent(applicationId)}&select=*`, {
@@ -87,22 +90,20 @@ module.exports = async (req, res) => {
         console.log('interactions: lookup for ' + applicationId + ' returned ' + (application ? 'a row (cert_key=' + application.cert_key + ')' : 'no row'));
       } catch (e) {
         console.error('interactions: could not look up application ' + applicationId + ':', e);
-        return;
+        return res.status(200).json({ type: 6 });
       }
       if (!application) {
         console.error('interactions: acknowledge click for unknown application ' + applicationId);
-        return;
+        return res.status(200).json({ type: 6 });
       }
 
       const clickerId = interaction.member && interaction.member.user && interaction.member.user.id;
       if (clickerId !== application.applicant_id) {
-        // Already deferred, so this has to be a followup rather than
-        // the initial response — but since the thread stays open for
-        // anyone else who can see it, and the real applicant should
-        // still be able to acknowledge normally, just log this rather
-        // than doing anything to the thread.
         console.error('interactions: acknowledge clicked by ' + clickerId + ', not the applicant ' + application.applicant_id + ' — ignored.');
-        return;
+        return res.status(200).json({
+          type: 4,
+          data: { content: 'Only the applicant can acknowledge this.', flags: 64 }
+        });
       }
 
       const cert = CERTIFICATIONS[application.cert_key];
@@ -134,7 +135,7 @@ module.exports = async (req, res) => {
         console.error('interactions: could not delete acknowledgement thread:', e);
       }
       console.log('interactions: ack flow fully completed for ' + applicationId);
-      return;
+      return res.status(200).json({ type: 6 });
     }
 
     return res.status(200).json({ type: 6 });
