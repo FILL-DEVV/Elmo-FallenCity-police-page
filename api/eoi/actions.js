@@ -23,6 +23,13 @@ function validateAnswers(cert, answers) {
 }
 
 async function handleApply(req, res, session) {
+  // Mirrors the frontend's EOIs-tab gating (canViewEoi) — a session
+  // that can't even see the tab shouldn't be able to submit to it by
+  // calling this endpoint directly.
+  if (!session.perms.canViewEoi) {
+    return res.status(403).json({ error: 'You do not have permission to apply for certifications' });
+  }
+
   const { certKey, answers } = req.body || {};
   const cert = CERTIFICATIONS[certKey];
   if (!cert) return res.status(400).json({ error: 'Unknown certification' });
