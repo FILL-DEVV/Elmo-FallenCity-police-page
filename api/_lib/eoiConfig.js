@@ -6,9 +6,7 @@
 //
 // Applications are submitted through the website now (not a Discord
 // popup form), so the 45-character label / 100-character placeholder
-// limits that used to matter no longer apply — modalLabel and
-// placeholder below are vestigial (harmless if left, safe to drop for
-// new entries).
+// limits that used to matter no longer apply.
 //
 // - key: short slug (letters/numbers/hyphens only, no colons) — used
 //   in the application's stored cert_key and inside Discord component
@@ -115,6 +113,11 @@ const CERTIFICATIONS = {
   }
 };
 
+// Parent channel the private EOI acknowledgement thread gets created
+// under when staff Accept an application on the website — same channel
+// the old Discord-side EOI dropdown used to live in.
+const EOI_CHANNEL_ID = '1534466794411004086';
+
 // The website's application form and "my applications" / review views
 // need the cert list and questions, but never the Discord role
 // name/ID — those stay server-side only. This is what the catalogue
@@ -133,4 +136,4 @@ function buildPublicCatalogue() {
   }));
 }
 
-module.exports = { CERTIFICATIONS, buildPublicCatalogue };
+module.exports = { CERTIFICATIONS, buildPublicCatalogue, EOI_CHANNEL_ID };
