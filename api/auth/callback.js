@@ -41,8 +41,11 @@ module.exports = async (req, res) => {
 
     const roles = await fetchGuildRoles(process.env.DISCORD_GUILD_ID, process.env.DISCORD_BOT_TOKEN);
     const roleIdToName = Object.fromEntries(roles.map(r => [r.id, r.name]));
-    const roleNames = (member.roles || []).map(id => roleIdToName[id]).filter(Boolean);
-    const perms = computePermissions(roleNames);
+    const roleIds = member.roles || [];
+    const roleNames = roleIds.map(id => roleIdToName[id]).filter(Boolean);
+    // Most checks match by role name (see permissions.js), but a couple
+    // match by raw ID instead — those get the ID list too.
+    const perms = computePermissions(roleNames, roleIds);
 
     // Prefer the server nickname (what everyone actually sees in this
     // Discord) over the account's global display name or username.
