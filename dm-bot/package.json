@@ -1,0 +1,16 @@
+{
+  "name": "fallenpd-dm-bot",
+  "version": "1.0.0",
+  "description": "Persistent Discord bot (Gateway-connected) for FallenPD — sends DMs on behalf of the main app, which runs on Vercel and can't hold a Gateway connection open itself.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.19.2"
+  }
+}
