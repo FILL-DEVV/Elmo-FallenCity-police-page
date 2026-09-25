@@ -25,9 +25,15 @@ const EDIT_INFO_ROLES = [
 // the Promote, Terminate, and Add Officer buttons, but not the rest of
 // TIER1's access (roster import, clear all, terminated records).
 const INCREMENTAL_SERGEANT_ROLES = ['incremental sergeant'];
+// EOIs tab visibility — matched by role ID rather than name (unlike
+// every other check on this page) since this role's exact name wasn't
+// given, only its ID; ID matching is also immune to the role later
+// being renamed. DOJ still sees every tab per the invariant above.
+const EOI_VIEWER_ROLE_ID = '1401964701688270948';
 
-function computePermissions(roleNames) {
+function computePermissions(roleNames, roleIds) {
   const names = (roleNames || []).map(n => String(n).toLowerCase());
+  const ids = roleIds || [];
   const has = (list) => list.some(r => names.includes(r));
 
   const tier1 = has(TIER1_ROLES);       // Senior Sergeant and above
@@ -66,8 +72,10 @@ function computePermissions(roleNames) {
     // High Command division (Police liaison through Chief Inspector) —
     // same audience as Senior Command, kept as its own field since the
     // two features may diverge later.
-    canViewHighCommand: highCommand || isDOJ
+    canViewHighCommand: highCommand || isDOJ,
+    // EOIs tab — restricted to holders of EOI_VIEWER_ROLE_ID, plus DOJ.
+    canViewEoi: ids.includes(EOI_VIEWER_ROLE_ID) || isDOJ
   };
 }
 
-module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES, INCREMENTAL_SERGEANT_ROLES };
+module.exports = { computePermissions, TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES, INCREMENTAL_SERGEANT_ROLES, EOI_VIEWER_ROLE_ID };
