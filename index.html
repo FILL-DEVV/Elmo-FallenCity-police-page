@@ -939,6 +939,7 @@
         <div class="unit-tabstrip" id="seniorcommand-tabstrip">
           <button class="unit-tab active" data-sub="terminated" type="button">Terminated officers</button>
           <button class="unit-tab" data-sub="promotions" type="button">Promotion logs</button>
+          <button class="unit-tab" data-sub="eoi-log" type="button">Applications log</button>
         </div>
 
         <div class="sheet active" id="seniorcmd-sub-terminated">
@@ -984,6 +985,26 @@
               </tr>
             </thead>
             <tbody id="log-body-promotions"></tbody>
+          </table></div>
+        </div>
+
+        <div class="sheet" id="seniorcmd-sub-eoi-log">
+          <div class="toolbar-row">
+            <span class="pill" id="entry-count-label-eoi-log">0 rows</span>
+            <div class="spacer"></div>
+          </div>
+          <div class="rank-note">Every certification application, logged automatically — newest first. Shows who applied, what for, its status, and who reviewed it. The application's actual answers are never logged here — see the Review tab for those, while an application is still pending.</div>
+          <div class="grid-scroll"><table class="grid">
+            <thead>
+              <tr>
+                <th class="colhead col-unit"><span class="letter">A</span><span class="fieldname">Applicant</span></th>
+                <th class="colhead col-unit"><span class="letter">B</span><span class="fieldname">Certification</span></th>
+                <th class="colhead col-promo"><span class="letter">C</span><span class="fieldname">Status</span></th>
+                <th class="colhead col-promo"><span class="letter">D</span><span class="fieldname">Reviewed by</span></th>
+                <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Date</span></th>
+              </tr>
+            </thead>
+            <tbody id="log-body-eoi-log"></tbody>
           </table></div>
         </div>
       </div>
@@ -3026,7 +3047,51 @@
     btn.disabled = true;
     await apiPost('/api/eoi/actions', { action: 'review', applicationId, decision });
     await loadPendingApplications();
+    await loadEoiLog();
   });
+
+  /* ---------- Senior Command: Applications log ----------
+     A history of every application (any status) for Senior Command —
+     deliberately selects only these five columns, so the actual
+     question/answer content never reaches the browser here at all,
+     not just hidden in the UI. */
+  let eoiLog = [];
+  async function loadEoiLog(){
+    const { data, error } = await sb.from('eoi_applications')
+      .select('id,cert_key,applicant_name,status,reviewed_by,created')
+      .order('created', { ascending: false });
+    if(error){ console.error('Could not load applications log', error); return; }
+    eoiLog = data || [];
+    renderEoiLog();
+  }
+  function renderEoiLog(){
+    const body = document.getElementById('log-body-eoi-log');
+    const countLabel = document.getElementById('entry-count-label-eoi-log');
+    if(!body) return;
+    if(countLabel) countLabel.textContent = eoiLog.length + (eoiLog.length === 1 ? ' row' : ' rows');
+    body.innerHTML = '';
+    if(eoiLog.length === 0){
+      const tr = document.createElement('tr');
+      tr.className = 'empty-row';
+      tr.innerHTML = `<td colspan="5">No applications logged yet — they'll appear here automatically.</td>`;
+      body.appendChild(tr);
+      return;
+    }
+    eoiLog.forEach(app => {
+      const cert = eoiCatalogueByKey[app.cert_key];
+      const label = cert ? cert.label : app.cert_key;
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="cell-unit">${escapeHtml(app.applicant_name)}</td>
+        <td class="cell-unit">${escapeHtml(label)}</td>
+        <td class="cell-promo"><span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></td>
+        <td class="cell-promo">${escapeHtml(app.reviewed_by || '—')}</td>
+        <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(new Date(app.created).toISOString()))}</span></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
 
   /* ---------- Ranks reference sheet (single unified list) ---------- */
   function renderRankGrid(){
@@ -3048,11 +3113,12 @@
     await loadEoiCatalogue();
     await loadMyApplications();
     await loadPendingApplications();
+    await loadEoiLog();
   });
   sb.channel('officers-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'officers' }, () => { reloadAll(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_log' }, () => { reloadAll(); })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'eoi_applications' }, () => { loadMyApplications(); loadPendingApplications(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'eoi_applications' }, () => { loadMyApplications(); loadPendingApplications(); loadEoiLog(); })
     .subscribe();
 })();
 </script>
