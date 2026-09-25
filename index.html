@@ -466,10 +466,11 @@
         </div>
 
         <div class="sheet" id="eoi-sub-review">
+          <div class="unit-tabstrip" id="eoi-review-divisions-tabstrip"></div>
           <div class="toolbar-row">
             <span class="pill" id="eoi-pending-count-label">0 pending</span>
           </div>
-          <div class="rank-note">Pending certification applications — review the answers and Accept or Deny. Accepting opens a private Discord thread for the applicant with an Acknowledge button that grants their role.</div>
+          <div class="rank-note">Pending certification applications for this division — review the answers and Accept or Deny. Accepting opens a private Discord thread for the applicant with an Acknowledge button that grants their role.</div>
           <div id="eoi-review-list"></div>
         </div>
       </div>
@@ -1500,6 +1501,27 @@
     });
   });
 
+  // Review sub-tab: one tab per division (GD/Highway/TOU/CIU/Senior
+  // command) so pending applications sort by which division their
+  // certification belongs to (eoiConfig.js's "division" field), same
+  // labels as the Callsigns tabstrip.
+  const EOI_REVIEW_DIVISIONS = ['general', 'highway', 'tou', 'crime', 'srcmd'];
+  let eoiReviewDivision = EOI_REVIEW_DIVISIONS[0];
+  const eoiReviewTabstripEl = document.getElementById('eoi-review-divisions-tabstrip');
+  EOI_REVIEW_DIVISIONS.forEach((key, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'unit-tab' + (i === 0 ? ' active' : '');
+    btn.dataset.div = key;
+    btn.type = 'button';
+    btn.textContent = key === 'srcmd' ? 'Senior command' : DIVISIONS[key].label;
+    btn.addEventListener('click', () => {
+      eoiReviewDivision = key;
+      document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t === btn));
+      renderEoiReview();
+    });
+    eoiReviewTabstripEl.appendChild(btn);
+  });
+
   function activateSeniorCommandSub(sub){
     document.querySelectorAll('#seniorcommand-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
     document.querySelectorAll('#sheet-seniorcommand > .sheet').forEach(s => s.classList.toggle('active', s.id === 'seniorcmd-sub-' + sub));
@@ -2376,17 +2398,36 @@
     pendingApplications = data || [];
     renderEoiReview();
   }
+  function certDivision(cert){
+    return (cert && cert.division) || 'general';
+  }
   function renderEoiReview(){
     const container = document.getElementById('eoi-review-list');
     const countLabel = document.getElementById('eoi-pending-count-label');
     if(!container) return;
-    if(countLabel) countLabel.textContent = pendingApplications.length + (pendingApplications.length === 1 ? ' pending' : ' pending');
+
+    // If a deep-linked application sits under a different division tab
+    // than the one currently active, switch to it first so the card
+    // actually renders for the flash-and-scroll below to find.
+    if(pendingDeepLinkAppId){
+      const target = pendingApplications.find(a => a.id === pendingDeepLinkAppId);
+      if(target){
+        const targetDiv = certDivision(eoiCatalogueByKey[target.cert_key]);
+        if(targetDiv !== eoiReviewDivision){
+          eoiReviewDivision = targetDiv;
+          document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === targetDiv));
+        }
+      }
+    }
+
+    const filtered = pendingApplications.filter(app => certDivision(eoiCatalogueByKey[app.cert_key]) === eoiReviewDivision);
+    if(countLabel) countLabel.textContent = filtered.length + (filtered.length === 1 ? ' pending' : ' pending');
     container.innerHTML = '';
-    if(pendingApplications.length === 0){
-      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">No pending applications.</div>';
+    if(filtered.length === 0){
+      container.innerHTML = '<div style="color:var(--sub); font-size:0.8rem;">No pending applications for this division.</div>';
       return;
     }
-    pendingApplications.forEach(app => {
+    filtered.forEach(app => {
       const cert = eoiCatalogueByKey[app.cert_key];
       const label = cert ? cert.label : app.cert_key;
       const qaHtml = (cert ? cert.questions : []).map(q => `
