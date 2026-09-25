@@ -1,40 +1,33 @@
 // Certification EOI catalogue — add a new certification by adding a new
-// entry here; the dropdown, the popup application form, the review
-// embed, and auto-granting the role on Acknowledge all read from this
+// entry here; the application form on the website, the staff review
+// page, and auto-granting the role on Acknowledge all read from this
 // one list, so this file is the only thing that needs editing to add
 // more.
 //
+// Applications are submitted through the website now (not a Discord
+// popup form), so the 45-character label / 100-character placeholder
+// limits that used to matter no longer apply — modalLabel and
+// placeholder below are vestigial (harmless if left, safe to drop for
+// new entries).
+//
 // - key: short slug (letters/numbers/hyphens only, no colons) — used
-//   inside component custom_ids. Keep it stable once posted: changing
-//   it breaks any application form someone already has open.
-// - label: shown in the dropdown and on the review embed.
-// - minRankNote: shown next to the label in the dropdown, e.g.
+//   in the application's stored cert_key and inside Discord component
+//   custom_ids. Keep it stable once used: changing it orphans any
+//   already-submitted applications for this cert.
+// - label: shown on the website and in the Discord acknowledgement
+//   thread.
+// - minRankNote: shown next to the label on the website, e.g.
 //   "Constable +". Display only — not currently checked against the
 //   applicant's actual rank.
-// - questions: up to 5 (Discord's popup-form limit), each becomes one
-//   text box. style "short" is a single line, "long" is a paragraph box.
-// - label (on a question): the FULL question text — shown as the field
-//   name on the review embed (reviewers see the whole thing, no limit
-//   that matters here). Discord's popup form only allows a 45-character
-//   visible label though, so when a question's wording is longer than
-//   that, also set modalLabel (a short version) and optionally
-//   placeholder (up to 100 chars) so the applicant still gets useful
-//   context in the form itself even though the full wording only shows
-//   up later, in the reviewers' embed.
+// - questions: each becomes one text box on the website's application
+//   form. style "short" is a single line, "long" is a paragraph box.
 // - discordRoleName: exact Discord role name granted automatically when
-//   the applicant clicks Acknowledge (after staff Accepts), matched
-//   case-insensitively against the server's roles. Ignored if
-//   discordRoleId is set.
+//   the applicant clicks Acknowledge (after staff Accepts on the
+//   website), matched case-insensitively against the server's roles.
+//   Ignored if discordRoleId is set.
 // - discordRoleId: the Discord role's ID, granted directly with no name
 //   lookup — preferred over discordRoleName since it can't be broken by
 //   a role rename later. If both are set, discordRoleId wins.
-// - reviewChannelId: the Discord channel completed applications for
-//   THIS certification get posted to for Accept/Deny — each
-//   certification can route to its own channel.
-// Channel the "Certification EOIs" dropdown embed lives in — also where
-// the private acknowledgement thread gets created on Accept.
-const EOI_CHANNEL_ID = '1534466794411004086';
-
 const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
@@ -44,8 +37,7 @@ const CERTIFICATIONS = {
       { id: 'q2', label: 'Relevant experience?', style: 'long', required: true },
       { id: 'q3', label: 'Anything else we should know?', style: 'long', required: false }
     ],
-    discordRoleName: 'Test Cert',
-    reviewChannelId: 'REPLACE_ME_REVIEW_CHANNEL_ID'
+    discordRoleName: 'Test Cert'
   },
   polair: {
     label: 'PolAir',
@@ -54,46 +46,35 @@ const CERTIFICATIONS = {
       {
         id: 'q1',
         label: 'What do you believe are the primary roles of PolAir?',
-        modalLabel: 'Primary roles of PolAir?',
-        placeholder: 'What do you believe are the primary roles of PolAir?',
         style: 'long',
         required: true
       },
       {
         id: 'q2',
         label: 'How can aerial support improve police operations? Provide an example of when PolAir should be deployed.',
-        modalLabel: 'Aerial support & deployment.',
-        placeholder: 'How can aerial support improve police operations? Give an example of when PolAir should deploy.',
         style: 'long',
         required: true
       },
       {
         id: 'q3',
         label: 'Explain how you would coordinate and communicate with ground units, including Highway Patrol and TOU, during a major incident or pursuit?',
-        modalLabel: 'Communication/radio coms',
-        placeholder: 'How would you coordinate & communicate with ground units (Highway Patrol, TOU) during an incident?',
         style: 'long',
         required: true
       },
       {
         id: 'q4',
         label: 'How would you prioritise requests if multiple units requiring PolAir assistance at the same time?',
-        modalLabel: 'Request Prioritisation.',
-        placeholder: 'How would you prioritise requests if multiple units requiring PolAir assistance at the same time?',
         style: 'long',
         required: true
       },
       {
         id: 'q5',
         label: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
-        modalLabel: 'Past aviation experience',
-        placeholder: 'What experience do you have with aviation, aerial operations, or similar roles (if any)?',
         style: 'long',
         required: true
       }
     ],
-    discordRoleId: '1470382539217571921',
-    reviewChannelId: '1534470322655596694'
+    discordRoleId: '1470382539217571921'
   },
   sfc: {
     label: 'SFC',
@@ -102,74 +83,54 @@ const CERTIFICATIONS = {
       {
         id: 'q1',
         label: 'Describe a situation where you should NOT draw or use your 2 handed firearm.',
-        modalLabel: 'Situation 1',
-        placeholder: 'Describe a situation where you should NOT draw or use your 2 handed firearm.',
         style: 'long',
         required: true
       },
       {
         id: 'q2',
         label: 'Describe a situation where you SHOULD draw or use your 2 handed firearm.',
-        modalLabel: 'Situation 2',
-        placeholder: 'Describe a situation where you SHOULD draw or use your 2 handed firearm.',
         style: 'long',
         required: true
       },
       {
         id: 'q3',
         label: 'Why should the command team trust you with Specialised Firearms Certification, and how will you maintain your proficiency after being certified?',
-        modalLabel: 'Trust and proficiency',
-        placeholder: 'Why should command trust you with SFC, and how will you maintain proficiency after certification?',
         style: 'long',
         required: true
       },
       {
         id: 'q4',
         label: 'What would you do if a supervisor gave you an instruction you believed was unsafe or against policy?',
-        modalLabel: 'unsafe instructions',
-        placeholder: 'What would you do if a supervisor gave you an instruction you believed was unsafe or against policy?',
         style: 'long',
         required: true
       },
       {
         id: 'q5',
         label: 'Do you understand that if you breach the rules and guidelines of the SFC certification, It will be taken off you?',
-        modalLabel: 'Breach rules and guidelines',
-        placeholder: "Do you understand that breaching SFC's rules and guidelines means it will be taken off you?",
         style: 'long',
         required: true
       }
     ],
-    discordRoleId: '1483691612994408518',
-    reviewChannelId: '1534468202384330825'
+    discordRoleId: '1483691612994408518'
   }
 };
 
-// Builds the "Certification EOIs" dropdown embed message — shared by
-// the one-time poster endpoint and anywhere else that needs to (re)post
-// the same embed after CERTIFICATIONS changes.
-function buildEoiSelectPayload() {
-  const options = Object.entries(CERTIFICATIONS).map(([key, cert]) => ({
+// The website's application form and "my applications" / review views
+// need the cert list and questions, but never the Discord role
+// name/ID — those stay server-side only. This is what the catalogue
+// endpoint sends to the browser.
+function buildPublicCatalogue() {
+  return Object.entries(CERTIFICATIONS).map(([key, cert]) => ({
+    key,
     label: cert.label,
-    value: key,
-    description: cert.minRankNote ? cert.minRankNote.slice(0, 100) : undefined
+    minRankNote: cert.minRankNote || '',
+    questions: cert.questions.map((q) => ({
+      id: q.id,
+      label: q.label,
+      style: q.style || 'long',
+      required: !!q.required
+    }))
   }));
-  return {
-    embeds: [{
-      title: 'Certification EOIs',
-      description: Object.values(CERTIFICATIONS).map(c => `**${c.label}** ${c.minRankNote || ''}`).join('\n'),
-      color: 0x3b82f6
-    }],
-    components: [{
-      type: 1,
-      components: [{
-        type: 3,
-        custom_id: 'eoi:select',
-        placeholder: 'Make a selection',
-        options
-      }]
-    }]
-  };
 }
 
-module.exports = { CERTIFICATIONS, buildEoiSelectPayload, EOI_CHANNEL_ID };
+module.exports = { CERTIFICATIONS, buildPublicCatalogue };
