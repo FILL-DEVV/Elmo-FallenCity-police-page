@@ -26,6 +26,11 @@
 // - discordRoleId: the Discord role's ID, granted directly with no name
 //   lookup — preferred over discordRoleName since it can't be broken by
 //   a role rename later. If both are set, discordRoleId wins.
+// - notifyChannelId / notifyRoleId: if both are set, submitting an
+//   application for this cert pings notifyRoleId in notifyChannelId
+//   with a deep link straight to that application on the website's
+//   Review tab. Optional — omit both to submit silently (staff just see
+//   it appear in the Review tab / realtime).
 const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
@@ -109,7 +114,9 @@ const CERTIFICATIONS = {
         required: true
       }
     ],
-    discordRoleId: '1483691612994408518'
+    discordRoleId: '1483691612994408518',
+    notifyChannelId: '1534468202384330825',
+    notifyRoleId: '1467025802767110329'
   }
 };
 
