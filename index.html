@@ -891,6 +891,25 @@
         document.querySelector('#eoi-tabstrip .unit-tab[data-sub="apply"]').click();
       }
     }
+
+    // Review sub-tab: each division tab is gated by its own permission
+    // (see permissions.js) — General duties needs only the base
+    // reviewer tier, Highway/TOU/CIU also need that division's role,
+    // Senior command needs High Command / DOJ.
+    const eoiReviewDivPerm = {
+      general: p.canReviewGeneral, highway: p.canReviewHighway,
+      tou: p.canReviewTou, crime: p.canReviewCrime, srcmd: p.canReviewSrcmd
+    };
+    let activeEoiReviewTab = null;
+    document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => {
+      const allowed = !!eoiReviewDivPerm[t.dataset.div];
+      t.style.display = allowed ? '' : 'none';
+      if(t.classList.contains('active')) activeEoiReviewTab = { el: t, allowed };
+    });
+    if(activeEoiReviewTab && !activeEoiReviewTab.allowed){
+      const firstVisible = document.querySelector('#eoi-review-divisions-tabstrip .unit-tab:not([style*="display: none"])');
+      if(firstVisible) firstVisible.click();
+    }
   }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -2401,6 +2420,14 @@
   function certDivision(cert){
     return (cert && cert.division) || 'general';
   }
+  function canReviewDivisionClient(division){
+    const p = currentUser.perms || {};
+    if(division === 'highway') return !!p.canReviewHighway;
+    if(division === 'tou') return !!p.canReviewTou;
+    if(division === 'crime') return !!p.canReviewCrime;
+    if(division === 'srcmd') return !!p.canReviewSrcmd;
+    return !!p.canReviewGeneral;
+  }
   function renderEoiReview(){
     const container = document.getElementById('eoi-review-list');
     const countLabel = document.getElementById('eoi-pending-count-label');
@@ -2408,12 +2435,15 @@
 
     // If a deep-linked application sits under a different division tab
     // than the one currently active, switch to it first so the card
-    // actually renders for the flash-and-scroll below to find.
+    // actually renders for the flash-and-scroll below to find — but
+    // only when this session is actually allowed to review that
+    // division; otherwise leave the currently active (permitted) tab
+    // alone, same as the tabstrip's own gating.
     if(pendingDeepLinkAppId){
       const target = pendingApplications.find(a => a.id === pendingDeepLinkAppId);
       if(target){
         const targetDiv = certDivision(eoiCatalogueByKey[target.cert_key]);
-        if(targetDiv !== eoiReviewDivision){
+        if(targetDiv !== eoiReviewDivision && canReviewDivisionClient(targetDiv)){
           eoiReviewDivision = targetDiv;
           document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t.dataset.div === targetDiv));
         }
