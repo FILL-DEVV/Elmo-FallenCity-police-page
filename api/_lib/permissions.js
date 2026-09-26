@@ -8,6 +8,9 @@ const TIER1_ROLES = [
 ];
 const TIER2_ROLES = ['fto'];
 const TIER3_ROLES = ['senior fto', 'fto supervisor', 'fto director', 'head of academy'];
+// FTO Supervisor and above — one tier narrower than TIER3_ROLES (excludes
+// Senior FTO) — gates the EOI Review tab's FTO sub-tab specifically.
+const FTO_SUPERVISOR_ROLES = ['fto supervisor', 'fto director', 'head of academy'];
 // High Command Team / Commissioned Office — unlocks the Senior Command tab.
 const HIGH_COMMAND_ROLES = ['high command team', 'commissioned office'];
 // Department of Justice — full access to every tab and every action,
@@ -53,6 +56,7 @@ function computePermissions(roleNames, roleIds) {
   const tier1 = has(TIER1_ROLES);       // Senior Sergeant and above
   const tier2 = has(TIER2_ROLES);       // FTO
   const tier3 = has(TIER3_ROLES);       // Senior FTO and above
+  const ftoSupervisorPlus = has(FTO_SUPERVISOR_ROLES); // FTO Supervisor and above
   const highCommand = has(HIGH_COMMAND_ROLES); // High Command Team / Commissioned Office
   const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
   const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
@@ -103,13 +107,16 @@ function computePermissions(roleNames, roleIds) {
     canReviewHighway: (canPromoteAny && inHighway) || highCommand || isDOJ,
     canReviewTou: (canPromoteAny && inTou) || highCommand || isDOJ,
     canReviewCrime: (canPromoteAny && inCrime) || highCommand || isDOJ,
-    canReviewSrcmd: highCommand || isDOJ
+    canReviewSrcmd: highCommand || isDOJ,
+    // FTO tab — FTO Supervisor and above only (not Senior FTO or plain
+    // FTO): a narrower slice than the Academy tab's tier3 audience.
+    canReviewFto: ftoSupervisorPlus || highCommand || isDOJ
   };
 }
 
 // Shared by the frontend's tab-visibility gating and the review API
 // endpoint's server-side check — given a full perms object and an
-// application's cert division ('general'/'highway'/'tou'/'crime'/'srcmd'),
+// application's cert division ('general'/'highway'/'tou'/'crime'/'srcmd'/'fto'),
 // says whether this session may review applications in that division.
 function canReviewApplicationDivision(perms, division) {
   const p = perms || {};
@@ -118,12 +125,13 @@ function canReviewApplicationDivision(perms, division) {
     case 'tou': return !!p.canReviewTou;
     case 'crime': return !!p.canReviewCrime;
     case 'srcmd': return !!p.canReviewSrcmd;
+    case 'fto': return !!p.canReviewFto;
     default: return !!p.canReviewGeneral;
   }
 }
 
 module.exports = {
   computePermissions, canReviewApplicationDivision,
-  TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES, INCREMENTAL_SERGEANT_ROLES,
+  TIER1_ROLES, TIER2_ROLES, TIER3_ROLES, FTO_SUPERVISOR_ROLES, HIGH_COMMAND_ROLES, DOJ_ROLES, EDIT_INFO_ROLES, INCREMENTAL_SERGEANT_ROLES,
   EOI_VIEWER_ROLE_ID, TOU_MEMBER_ROLE_IDS, HIGHWAY_MEMBER_ROLE_IDS, CRIME_MEMBER_ROLE_IDS
 };
