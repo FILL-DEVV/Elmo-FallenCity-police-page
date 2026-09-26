@@ -117,6 +117,19 @@ async function sendChannelPayload(channelId, botToken, payload) {
   return res.json();
 }
 
+// Deletes a single message from a channel — used to remove an EOI
+// submission-notification ping once that application has been reviewed
+// (accepted or denied). 404 is treated as success rather than an error:
+// the message may already be gone (deleted manually, channel pruned),
+// and there's nothing left to clean up either way.
+async function deleteChannelMessage(channelId, messageId, botToken) {
+  const res = await discordFetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bot ${botToken}` }
+  });
+  if (!res.ok && res.status !== 404) throw new Error('Failed to delete channel message: ' + res.status + ' ' + (await res.text()));
+}
+
 // Edits the message an interaction was originally responding to — used
 // after the interaction was acknowledged with a DEFERRED response (type
 // 6), once the slower work that couldn't fit in Discord's 3-second
@@ -237,7 +250,7 @@ async function setMemberRoles(guildId, userId, roleIds, botToken) {
 
 module.exports = {
   exchangeCodeForToken, fetchDiscordUser, fetchGuildMember, fetchGuildRoles,
-  fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload,
+  fetchGuildChannels, findChannelByName, sendChannelMessage, sendChannelPayload, deleteChannelMessage,
   editOriginalInteractionResponse, sendInteractionFollowup, createPrivateThread, addThreadMember, archiveThread, deleteThread,
   addMemberRole, removeMemberRole, setMemberRoles
 };
