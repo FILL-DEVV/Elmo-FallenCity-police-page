@@ -24,16 +24,30 @@ const RANK_ORDER_LIST = [
   "Constable", "Trial Detective", "TOU trial",
   "Probationary Constable", "student", "Department Of Justice"
 ];
-const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [r, i]));
+
+// Matched case-insensitively with surrounding whitespace trimmed — a
+// roster entry that came in through Import roster (raw CSV, never
+// passed through the app's own rank dropdown) or an old manual edit can
+// easily carry different casing or a stray space, and an exact-string
+// comparison would silently fail closed on that, blocking a genuinely
+// qualified applicant with the exact same "you must be at least X"
+// message a real rank shortfall produces — indistinguishable to the
+// person applying.
+function normalizeRank(r) {
+  return String(r || '').trim().toLowerCase();
+}
+const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [normalizeRank(r), i]));
 
 // True if currentRank is at least as senior as minRank. No minRank set
-// on the cert always passes. An unrecognized rank string (either side)
-// never silently passes — it fails closed rather than letting a typo'd
-// or renamed rank bypass the check.
+// on the cert always passes. An unrecognized rank string (either side,
+// after normalizing) never silently passes — it fails closed rather
+// than letting a typo'd or renamed rank bypass the check entirely.
 function meetsMinRank(currentRank, minRank) {
   if (!minRank) return true;
-  if (RANK_ORDER[currentRank] === undefined || RANK_ORDER[minRank] === undefined) return false;
-  return RANK_ORDER[currentRank] <= RANK_ORDER[minRank];
+  const cur = RANK_ORDER[normalizeRank(currentRank)];
+  const min = RANK_ORDER[normalizeRank(minRank)];
+  if (cur === undefined || min === undefined) return false;
+  return cur <= min;
 }
 
-module.exports = { RANK_ORDER_LIST, RANK_ORDER, meetsMinRank };
+module.exports = { RANK_ORDER_LIST, RANK_ORDER, meetsMinRank, normalizeRank };
