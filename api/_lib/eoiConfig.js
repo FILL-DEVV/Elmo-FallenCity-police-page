@@ -15,8 +15,15 @@
 // - label: shown on the website and in the Discord acknowledgement
 //   thread.
 // - minRankNote: shown next to the label on the website, e.g.
-//   "Constable +". Display only — not currently checked against the
-//   applicant's actual rank.
+//   "Constable +". Display only — wording is free, doesn't have to
+//   match minRank's exact rank name below.
+// - minRank: the actual minimum rank enforced on apply, using the
+//   website's own rank-seniority ordering (api/_lib/ranks.js) — an
+//   applicant whose on-file rank is junior to this is rejected before
+//   the application is saved. Must be spelled exactly as it appears in
+//   that ordering (e.g. 'Senior Constable', 'Incremental Sergeant').
+//   Optional — omit to allow any rank to apply (a DOJ session always
+//   bypasses this check, same as elsewhere in the app).
 // - division: which Review-tab this cert's pending applications sort
 //   under on the website — one of 'general' (GD), 'highway', 'tou',
 //   'crime' (CIU), or 'srcmd' (Senior command). Defaults to 'general'
@@ -56,6 +63,7 @@ const CERTIFICATIONS = {
   polair: {
     label: 'PolAir',
     minRankNote: 'Senior Constable +',
+    minRank: 'Senior Constable',
     // Filed under Senior command — PolAir applications are reviewed
     // there rather than under any single division.
     division: 'srcmd',
@@ -96,6 +104,7 @@ const CERTIFICATIONS = {
   sfc: {
     label: 'SFC',
     minRankNote: 'Senior Constable +',
+    minRank: 'Senior Constable',
     // Filed under TOU — its notifyRoleId below is the same role ID
     // used as TOU's senior-tier leadership role in roleSync.js.
     division: 'tou',
