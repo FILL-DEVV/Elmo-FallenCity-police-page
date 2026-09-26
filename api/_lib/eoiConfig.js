@@ -194,6 +194,49 @@ const CERTIFICATIONS = {
     notifyChannelId: '1553064765918806146',
     notifyRoleId: ['1539561786964049920', '1536990161206906910', '1536993157336539197'],
     acceptMessage: 'Your application for **Field Training Officer (FTO)** has been accepted. Please contact a FTO Supervisor+ for further details. Press Acknowledge below to receive the certification role — this closes the thread.'
+  },
+  bike: {
+    label: 'Bike Cert',
+    minRankNote: 'Constable +',
+    minRank: 'Constable',
+    // Filed under Highway Patrol.
+    division: 'highway',
+    questions: [
+      {
+        id: 'q1',
+        label: 'Why do you wish to obtain your Bike Certification?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q2',
+        label: 'When is it appropriate to use a police bike during patrol?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q3',
+        label: 'When should you disengage from a pursuit due to unsafe conditions?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q4',
+        label: 'Can you use a police bike to ram, PIT, or intentionally hit another vehicle? Explain why.',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q5',
+        label: 'What may happen if you misuse your Bike Certification or fail to follow SOPs and server rules?',
+        style: 'long',
+        required: true
+      }
+    ],
+    discordRoleId: '1470382433634357279',
+    notifyChannelId: '1542054998827991152',
+    notifyRoleId: '1467025926234833123',
+    acceptMessage: 'Your application for **Bike Cert** has been accepted. Please contact a Highway Patrol leadership member for your induction into the Bike Certification. Press Acknowledge below to receive the certification role — this closes the thread.'
   }
 };
 
