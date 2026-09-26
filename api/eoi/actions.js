@@ -1,7 +1,7 @@
 const { getSession } = require('../_lib/session');
 const { sbFetch } = require('../_lib/supabase');
 const { CERTIFICATIONS, buildPublicCatalogue, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
-const { createPrivateThread, addThreadMember, sendChannelPayload } = require('../_lib/discord');
+const { createPrivateThread, addThreadMember, sendChannelPayload, deleteChannelMessage } = require('../_lib/discord');
 const { canReviewApplicationDivision } = require('../_lib/permissions');
 const { meetsMinRank } = require('../_lib/ranks');
 
@@ -85,13 +85,22 @@ async function handleApply(req, res, session) {
   // Optional — only certs with both fields set ping anyone on submit.
   // notifyRoleId may be a single role ID or an array of them (pings
   // each). Never blocks the application from being saved if this fails.
+  // The posted message's channel/id are saved back onto the row so
+  // handleReview can delete this ping once the application is dealt
+  // with (accepted or denied) — best-effort, so a failure here doesn't
+  // affect the application itself either.
   if (cert.notifyChannelId && cert.notifyRoleId) {
     try {
       const roleIds = Array.isArray(cert.notifyRoleId) ? cert.notifyRoleId : [cert.notifyRoleId];
       const mentions = roleIds.map((id) => `<@&${id}>`).join(' ');
       const link = 'https://www.fallenpd.com/?eoiApp=' + encodeURIComponent(row.id);
-      await sendChannelPayload(cert.notifyChannelId, process.env.DISCORD_BOT_TOKEN, {
+      const message = await sendChannelPayload(cert.notifyChannelId, process.env.DISCORD_BOT_TOKEN, {
         content: `${mentions} New **${cert.label}** application from ${session.username} — ${link}`
+      });
+      await sbFetch(`/eoi_applications?id=eq.${encodeURIComponent(row.id)}`, {
+        method: 'PATCH',
+        body: { notify_channel_id: cert.notifyChannelId, notify_message_id: message.id },
+        extraHeaders: { Prefer: 'return=minimal' }
       });
     } catch (e) {
       console.error('eoi apply: could not post submission notification:', e);
@@ -145,6 +154,18 @@ async function handleReview(req, res, session) {
     },
     extraHeaders: { Prefer: 'return=minimal' }
   });
+
+  // Clean up the submission-ping message now that this application has
+  // been dealt with either way — best-effort, never blocks the review
+  // itself. Only ever present for certs with notifyChannelId/notifyRoleId
+  // set (currently SFC and FTO).
+  if (application.notify_channel_id && application.notify_message_id) {
+    try {
+      await deleteChannelMessage(application.notify_channel_id, application.notify_message_id, process.env.DISCORD_BOT_TOKEN);
+    } catch (e) {
+      console.error('eoi review: could not delete submission notification message:', e);
+    }
+  }
 
   if (decision === 'accept') {
     // Private thread = the closest thing to a message only the
