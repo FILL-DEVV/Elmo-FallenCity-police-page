@@ -199,6 +199,40 @@ async function handleReview(req, res, session) {
   res.status(200).json({ ok: true });
 }
 
+// One-off admin action — posts a fixed announcement embed (with a
+// button linking to the site) into EOI_CHANNEL_ID, pointing people at
+// the website's EOIs tab. Not tied to any UI button on the site
+// itself; meant to be triggered once manually (e.g. from the browser
+// console while logged in) whenever the announcement needs (re)posting.
+// Gated the same as reviewing applications — no dedup/idempotency, so
+// calling it again just posts a second copy.
+async function handlePostAnnouncement(req, res, session) {
+  if (!session.perms.canPromoteAny && !session.perms.isDOJ) {
+    return res.status(403).json({ error: 'You do not have permission to post this announcement' });
+  }
+  try {
+    await sendChannelPayload(EOI_CHANNEL_ID, process.env.DISCORD_BOT_TOKEN, {
+      embeds: [{
+        title: 'Certifications and EOIs',
+        url: 'https://www.fallenpd.com',
+        description: 'Every open certification lives on the roster site now, not in a dropdown here. Log in with Discord, open the EOIs tab, and apply from there.\n\n• Log in with your Discord account\n• Open the EOIs tab and pick a certification\n• Watch for a private thread once staff review it',
+        color: 0xd99a1f,
+        footer: { text: 'FallenPD Roster' }
+      }],
+      components: [{
+        type: 1,
+        components: [
+          { type: 2, style: 5, label: 'Open EOI portal', url: 'https://www.fallenpd.com' }
+        ]
+      }]
+    });
+    res.status(200).json({ ok: true });
+  } catch (e) {
+    console.error('eoi post-eoi-announcement: could not post announcement:', e);
+    res.status(500).json({ error: 'Failed to post announcement to Discord' });
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
     return res.status(200).json({ certifications: buildPublicCatalogue() });
@@ -212,6 +246,7 @@ module.exports = async (req, res) => {
   try {
     if (action === 'apply') return await handleApply(req, res, session);
     if (action === 'review') return await handleReview(req, res, session);
+    if (action === 'post-eoi-announcement') return await handlePostAnnouncement(req, res, session);
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     console.error('eoi action "' + action + '" failed:', err);
