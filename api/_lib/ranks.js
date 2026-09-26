@@ -1,29 +1,41 @@
-// Mirrors index.html's RANK_ORDER_LIST exactly — the single canonical
-// seniority ordering the website already uses across every division for
-// sorting and filtering, reused here to enforce an EOI certification's
-// minimum rank. Keep this in sync if that list in index.html ever
-// changes (rank renamed, a division's ladder restructured, etc).
+// Seniority ordering used to enforce an EOI certification's minimum
+// rank across every division. Unlike index.html's flat RANK_ORDER_LIST
+// (used there only to sort rows within one division's own roster, where
+// cross-division ties never come up), this groups each division's
+// equivalent working rank into the SAME tier — GD's "Senior Constable",
+// CIU's "Detective", and TOU's "Operator" all sit at tier index 13,
+// since they're each that division's ordinary rank past trial/
+// probation, not meaningfully senior/junior to one another. A minimum
+// set to any one of a tied group's names is met by every name in that
+// group.
 //
-// Lower index = more senior. Ranks from different divisions that sit at
-// the same tier (e.g. "Senior Constable" / "Detective" / "Operator")
-// are NOT given identical indices — they're ordered exactly as the
-// website's own reference Ranks sheet lists them, so a minimum set to
-// one division's rank name is very slightly stricter against another
-// division's equivalent-tier rank than an exact tier-for-tier mapping
-// would be. This matches the app's one existing source of truth rather
-// than inventing a second, separate equivalence table.
-const RANK_ORDER_LIST = [
-  "Police liaison",
-  "Commissioner", "Deputy Commissioner", "Assistant Commissioner",
-  "Chief Superintendent", "Superintendent", "Chief Inspector",
-  "Inspector", "Senior Sergeant", "Incremental Sergeant",
-  "GD supervisor", "Sergeant", "Detective Supervisor", "TOU Supervisor",
-  "Leading Senior Constable", "Lead Detective", "Lead Operator",
-  "Incremental Senior Constable", "Senior Detective", "Senior Operator",
-  "Senior Constable", "Detective", "Operator",
-  "Constable", "Trial Detective", "TOU trial",
-  "Probationary Constable", "student", "Department Of Justice"
+// Keep this in sync with index.html's own rank ladder if a rank is
+// renamed or a division's ladder restructured — the grouping here may
+// need to change too if a division's ladder gains or loses a rung.
+const RANK_TIERS = [
+  ["Police liaison"],
+  ["Commissioner"],
+  ["Deputy Commissioner"],
+  ["Assistant Commissioner"],
+  ["Chief Superintendent"],
+  ["Superintendent"],
+  ["Chief Inspector"],
+  ["Inspector"],
+  ["Senior Sergeant"],
+  ["Incremental Sergeant"],
+  ["GD supervisor", "Sergeant", "Detective Supervisor", "TOU Supervisor"],
+  ["Leading Senior Constable", "Lead Detective", "Lead Operator"],
+  ["Incremental Senior Constable", "Senior Detective", "Senior Operator"],
+  ["Senior Constable", "Detective", "Operator"],
+  ["Constable", "Trial Detective", "TOU trial"],
+  ["Probationary Constable"],
+  ["student"],
+  ["Department Of Justice"]
 ];
+// Flat list of every rank name, in the same tier order — kept for
+// anything that just wants "every recognized rank name" rather than the
+// grouping (e.g. validating a string is a real rank at all).
+const RANK_ORDER_LIST = RANK_TIERS.flat();
 
 // Matched case-insensitively with surrounding whitespace trimmed — a
 // roster entry that came in through Import roster (raw CSV, never
@@ -36,12 +48,16 @@ const RANK_ORDER_LIST = [
 function normalizeRank(r) {
   return String(r || '').trim().toLowerCase();
 }
-const RANK_ORDER = Object.fromEntries(RANK_ORDER_LIST.map((r, i) => [normalizeRank(r), i]));
+const RANK_ORDER = {};
+RANK_TIERS.forEach((tier, tierIndex) => {
+  tier.forEach((rank) => { RANK_ORDER[normalizeRank(rank)] = tierIndex; });
+});
 
-// True if currentRank is at least as senior as minRank. No minRank set
-// on the cert always passes. An unrecognized rank string (either side,
-// after normalizing) never silently passes — it fails closed rather
-// than letting a typo'd or renamed rank bypass the check entirely.
+// True if currentRank is at least as senior as minRank (lower/equal
+// tier index). No minRank set on the cert always passes. An
+// unrecognized rank string (either side, after normalizing) never
+// silently passes — it fails closed rather than letting a typo'd or
+// renamed rank bypass the check entirely.
 function meetsMinRank(currentRank, minRank) {
   if (!minRank) return true;
   const cur = RANK_ORDER[normalizeRank(currentRank)];
@@ -50,4 +66,4 @@ function meetsMinRank(currentRank, minRank) {
   return cur <= min;
 }
 
-module.exports = { RANK_ORDER_LIST, RANK_ORDER, meetsMinRank, normalizeRank };
+module.exports = { RANK_TIERS, RANK_ORDER_LIST, RANK_ORDER, meetsMinRank, normalizeRank };
