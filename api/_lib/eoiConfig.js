@@ -36,6 +36,11 @@
 //   with a deep link straight to that application on the website's
 //   Review tab. Optional — omit both to submit silently (staff just see
 //   it appear in the Review tab / realtime).
+// - acceptMessage: the message body posted in the private Discord
+//   thread when staff Accept this cert's application, above the
+//   Acknowledge button. Optional — falls back to a generic "your
+//   application for X has been accepted" line if omitted. Plain text;
+//   Discord markdown (**bold**, *italic*, etc.) works.
 const CERTIFICATIONS = {
   test: {
     label: 'Test Certification',
