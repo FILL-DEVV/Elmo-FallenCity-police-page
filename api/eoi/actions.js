@@ -82,14 +82,16 @@ async function handleApply(req, res, session) {
     extraHeaders: { Prefer: 'return=minimal' }
   });
 
-  // Optional — only certs with both fields set (currently just SFC)
-  // ping anyone on submit. Never blocks the application from being
-  // saved if this fails.
+  // Optional — only certs with both fields set ping anyone on submit.
+  // notifyRoleId may be a single role ID or an array of them (pings
+  // each). Never blocks the application from being saved if this fails.
   if (cert.notifyChannelId && cert.notifyRoleId) {
     try {
+      const roleIds = Array.isArray(cert.notifyRoleId) ? cert.notifyRoleId : [cert.notifyRoleId];
+      const mentions = roleIds.map((id) => `<@&${id}>`).join(' ');
       const link = 'https://www.fallenpd.com/?eoiApp=' + encodeURIComponent(row.id);
       await sendChannelPayload(cert.notifyChannelId, process.env.DISCORD_BOT_TOKEN, {
-        content: `<@&${cert.notifyRoleId}> New **${cert.label}** application from ${session.username} — ${link}`
+        content: `${mentions} New **${cert.label}** application from ${session.username} — ${link}`
       });
     } catch (e) {
       console.error('eoi apply: could not post submission notification:', e);
