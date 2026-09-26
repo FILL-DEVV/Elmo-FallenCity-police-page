@@ -541,7 +541,8 @@
                 <th class="colhead col-unit"><span class="letter">B</span><span class="fieldname">Certification</span></th>
                 <th class="colhead col-promo"><span class="letter">C</span><span class="fieldname">Status</span></th>
                 <th class="colhead col-promo"><span class="letter">D</span><span class="fieldname">Reviewed by</span></th>
-                <th class="colhead col-time"><span class="letter">E</span><span class="fieldname">Date</span></th>
+                <th class="colhead col-promo"><span class="letter">E</span><span class="fieldname">Acknowledged</span></th>
+                <th class="colhead col-time"><span class="letter">F</span><span class="fieldname">Date</span></th>
               </tr>
             </thead>
             <tbody id="log-body-eoi-log"></tbody>
@@ -2502,7 +2503,7 @@
   let eoiLog = [];
   async function loadEoiLog(){
     const { data, error } = await sb.from('eoi_applications')
-      .select('id,cert_key,applicant_name,status,reviewed_by,created')
+      .select('id,cert_key,applicant_name,status,reviewed_by,acknowledged_at,created')
       .order('created', { ascending: false });
     if(error){ console.error('Could not load applications log', error); return; }
     eoiLog = data || [];
@@ -2517,13 +2518,21 @@
     if(eoiLog.length === 0){
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      tr.innerHTML = `<td colspan="5">No applications logged yet — they'll appear here automatically.</td>`;
+      tr.innerHTML = `<td colspan="6">No applications logged yet — they'll appear here automatically.</td>`;
       body.appendChild(tr);
       return;
     }
     eoiLog.forEach(app => {
       const cert = eoiCatalogueByKey[app.cert_key];
       const label = cert ? cert.label : app.cert_key;
+      // Acknowledgement only ever applies to an accepted application —
+      // pending/denied show a dash rather than a Yes/No that wouldn't
+      // mean anything yet.
+      const ackCell = app.status !== 'accepted'
+        ? '—'
+        : (app.acknowledged_at
+            ? '<span class="status-badge status-accepted">Acknowledged</span>'
+            : '<span class="status-badge status-pending">Awaiting</span>');
       const tr = document.createElement('tr');
       tr.className = 'data-row';
       tr.innerHTML = `
@@ -2531,6 +2540,7 @@
         <td class="cell-unit">${escapeHtml(label)}</td>
         <td class="cell-promo"><span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></td>
         <td class="cell-promo">${escapeHtml(app.reviewed_by || '—')}</td>
+        <td class="cell-promo">${ackCell}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(new Date(app.created).toISOString()))}</span></td>
       `;
       body.appendChild(tr);
