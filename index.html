@@ -895,10 +895,12 @@
     // Review sub-tab: each division tab is gated by its own permission
     // (see permissions.js) — General duties needs only the base
     // reviewer tier, Highway/TOU/CIU also need that division's role,
-    // Senior command needs High Command / DOJ.
+    // Senior command needs High Command / DOJ, FTO needs FTO
+    // Supervisor and above.
     const eoiReviewDivPerm = {
       general: p.canReviewGeneral, highway: p.canReviewHighway,
-      tou: p.canReviewTou, crime: p.canReviewCrime, srcmd: p.canReviewSrcmd
+      tou: p.canReviewTou, crime: p.canReviewCrime, srcmd: p.canReviewSrcmd,
+      fto: p.canReviewFto
     };
     let activeEoiReviewTab = null;
     document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => {
@@ -1524,7 +1526,8 @@
   // command) so pending applications sort by which division their
   // certification belongs to (eoiConfig.js's "division" field), same
   // labels as the Callsigns tabstrip.
-  const EOI_REVIEW_DIVISIONS = ['general', 'highway', 'tou', 'crime', 'srcmd'];
+  const EOI_REVIEW_DIVISIONS = ['general', 'highway', 'tou', 'crime', 'srcmd', 'fto'];
+  const EOI_REVIEW_DIVISION_LABELS = { srcmd: 'Senior command', fto: 'FTO' };
   let eoiReviewDivision = EOI_REVIEW_DIVISIONS[0];
   const eoiReviewTabstripEl = document.getElementById('eoi-review-divisions-tabstrip');
   EOI_REVIEW_DIVISIONS.forEach((key, i) => {
@@ -1532,7 +1535,7 @@
     btn.className = 'unit-tab' + (i === 0 ? ' active' : '');
     btn.dataset.div = key;
     btn.type = 'button';
-    btn.textContent = key === 'srcmd' ? 'Senior command' : DIVISIONS[key].label;
+    btn.textContent = EOI_REVIEW_DIVISION_LABELS[key] || DIVISIONS[key].label;
     btn.addEventListener('click', () => {
       eoiReviewDivision = key;
       document.querySelectorAll('#eoi-review-divisions-tabstrip .unit-tab').forEach(t => t.classList.toggle('active', t === btn));
@@ -2426,6 +2429,7 @@
     if(division === 'tou') return !!p.canReviewTou;
     if(division === 'crime') return !!p.canReviewCrime;
     if(division === 'srcmd') return !!p.canReviewSrcmd;
+    if(division === 'fto') return !!p.canReviewFto;
     return !!p.canReviewGeneral;
   }
   function renderEoiReview(){
