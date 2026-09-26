@@ -139,7 +139,7 @@ async function handleReview(req, res, session) {
         content: `<@${application.applicant_id}>`,
         embeds: [{
           title: cert.label + ' — Application Accepted',
-          description: 'Your application for **' + cert.label + '** has been accepted. Press Acknowledge below to receive the certification role — this closes the thread.',
+          description: cert.acceptMessage || ('Your application for **' + cert.label + '** has been accepted. Press Acknowledge below to receive the certification role — this closes the thread.'),
           color: 0x2f8f5b
         }],
         components: [{
