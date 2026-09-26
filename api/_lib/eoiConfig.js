@@ -41,8 +41,10 @@
 // - notifyChannelId / notifyRoleId: if both are set, submitting an
 //   application for this cert pings notifyRoleId in notifyChannelId
 //   with a deep link straight to that application on the website's
-//   Review tab. Optional — omit both to submit silently (staff just see
-//   it appear in the Review tab / realtime).
+//   Review tab. notifyRoleId can be a single role ID string, or an
+//   array of role ID strings to ping several roles at once. Optional —
+//   omit both to submit silently (staff just see it appear in the
+//   Review tab / realtime).
 // - acceptMessage: the message body posted in the private Discord
 //   thread when staff Accept this cert's application, above the
 //   Acknowledge button. Optional — falls back to a generic "your
@@ -143,6 +145,55 @@ const CERTIFICATIONS = {
     discordRoleId: '1483691612994408518',
     notifyChannelId: '1534468202384330825',
     notifyRoleId: '1467025802767110329'
+  },
+  fto: {
+    label: 'Field Training Officer (FTO)',
+    minRankNote: 'Constable +',
+    minRank: 'Constable',
+    // Filed under its own FTO Review tab, reviewed by FTO Supervisor+.
+    division: 'fto',
+    questions: [
+      {
+        id: 'q1',
+        label: 'What is your in-city name, rank, and division?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q2',
+        label: 'Why do you wish to join the Field Training Officer Program?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q3',
+        label: 'What are your strengths and weaknesses in training?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q4',
+        label: 'Do you have any past experience as a Field Training Officer or anything similar?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q5',
+        label: 'If a student asks you a question that you are unsure about, what would you do?',
+        style: 'long',
+        required: true
+      },
+      {
+        id: 'q6',
+        label: 'Do you understand that failure to commit to your FTO duties will result in removal from the FTO program?',
+        style: 'long',
+        required: true
+      }
+    ],
+    discordRoleId: '1401969848413585459',
+    notifyChannelId: '1553064765918806146',
+    notifyRoleId: ['1539561786964049920', '1536990161206906910', '1536993157336539197'],
+    acceptMessage: 'Your application for **Field Training Officer (FTO)** has been accepted. Please contact a FTO Supervisor+ for further details. Press Acknowledge below to receive the certification role — this closes the thread.'
   }
 };
 
