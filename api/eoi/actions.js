@@ -3,6 +3,7 @@ const { sbFetch } = require('../_lib/supabase');
 const { CERTIFICATIONS, buildPublicCatalogue, EOI_CHANNEL_ID } = require('../_lib/eoiConfig');
 const { createPrivateThread, addThreadMember, sendChannelPayload } = require('../_lib/discord');
 const { canReviewApplicationDivision } = require('../_lib/permissions');
+const { meetsMinRank } = require('../_lib/ranks');
 
 // Handles the whole website-based EOI flow in one function (kept
 // together deliberately — Vercel's Hobby plan caps at 12 serverless
@@ -34,6 +35,24 @@ async function handleApply(req, res, session) {
   const { certKey, answers } = req.body || {};
   const cert = CERTIFICATIONS[certKey];
   if (!cert) return res.status(400).json({ error: 'Unknown certification' });
+
+  // Minimum rank is enforced against the applicant's own roster entry,
+  // not anything the client sends — a session can't claim a rank it
+  // doesn't hold. DOJ bypasses this, same as it bypasses every other
+  // gate in the app.
+  if (cert.minRank && !session.perms.isDOJ) {
+    const officerRows = await sbFetch(
+      `/officers?discord=eq.${encodeURIComponent(session.id)}&list_key=neq.terminated&select=rank&order=created.desc&limit=1`,
+      { extraHeaders: { Prefer: 'return=representation' } }
+    );
+    const officer = officerRows && officerRows[0];
+    if (!officer) {
+      return res.status(400).json({ error: 'We could not find your officer record on file — make sure your Discord ID is set correctly on your roster entry, or contact staff.' });
+    }
+    if (!meetsMinRank(officer.rank, cert.minRank)) {
+      return res.status(400).json({ error: 'You must be at least ' + cert.minRank + ' to apply for this certification.' });
+    }
+  }
 
   const validationError = validateAnswers(cert, answers);
   if (validationError) return res.status(400).json({ error: validationError });
