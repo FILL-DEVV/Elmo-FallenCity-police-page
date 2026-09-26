@@ -26,9 +26,9 @@
 //   bypasses this check, same as elsewhere in the app).
 // - division: which Review-tab this cert's pending applications sort
 //   under on the website — one of 'general' (GD), 'highway', 'tou',
-//   'crime' (CIU), or 'srcmd' (Senior command). Defaults to 'general'
-//   if omitted. Display/sorting only — never checked against the
-//   applicant's actual division.
+//   'crime' (CIU), 'srcmd' (Senior command), or 'fto'. Defaults to
+//   'general' if omitted. Display/sorting only — never checked against
+//   the applicant's actual division.
 // - questions: each becomes one text box on the website's application
 //   form. style "short" is a single line, "long" is a paragraph box.
 // - discordRoleName: exact Discord role name granted automatically when
