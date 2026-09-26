@@ -51,17 +51,6 @@
 //   application for X has been accepted" line if omitted. Plain text;
 //   Discord markdown (**bold**, *italic*, etc.) works.
 const CERTIFICATIONS = {
-  test: {
-    label: 'Test Certification',
-    minRankNote: '(placeholder — for testing the flow)',
-    division: 'general',
-    questions: [
-      { id: 'q1', label: 'Why are you interested in this certification?', style: 'long', required: true },
-      { id: 'q2', label: 'Relevant experience?', style: 'long', required: true },
-      { id: 'q3', label: 'Anything else we should know?', style: 'long', required: false }
-    ],
-    discordRoleName: 'Test Cert'
-  },
   polair: {
     label: 'PolAir',
     minRankNote: 'Senior Constable +',
