@@ -101,7 +101,9 @@ const CERTIFICATIONS = {
         required: true
       }
     ],
-    discordRoleId: '1470382539217571921'
+    discordRoleId: '1470382539217571921',
+    notifyChannelId: '1534470322655596694',
+    notifyRoleId: '1445015107255013396'
   },
   sfc: {
     label: 'SFC',
