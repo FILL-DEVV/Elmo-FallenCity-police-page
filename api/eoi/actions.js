@@ -36,6 +36,18 @@ async function handleApply(req, res, session) {
   const cert = CERTIFICATIONS[certKey];
   if (!cert) return res.status(400).json({ error: 'Unknown certification' });
 
+  // Role-restricted certs (e.g. Bike Cert — Highway/TOU only) — checked
+  // against the session's own Discord role IDs from login, not
+  // anything the client sends. DOJ bypasses this, same as every other
+  // gate in the app.
+  if (cert.applyRoleIds && cert.applyRoleIds.length && !session.perms.isDOJ) {
+    const sessionRoleIds = session.roleIds || [];
+    const eligible = cert.applyRoleIds.some((id) => sessionRoleIds.includes(id));
+    if (!eligible) {
+      return res.status(403).json({ error: 'You do not hold the required role to apply for this certification.' });
+    }
+  }
+
   // Minimum rank is enforced against the applicant's own roster entry,
   // not anything the client sends — a session can't claim a rank it
   // doesn't hold. DOJ bypasses this, same as it bypasses every other
