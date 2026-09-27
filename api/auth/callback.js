@@ -56,6 +56,7 @@ module.exports = async (req, res) => {
       username: displayName,
       avatar: user.avatar,
       roleNames,
+      roleIds,
       perms
     });
     res.setHeader('Set-Cookie', cookie);
