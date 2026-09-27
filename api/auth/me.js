@@ -11,6 +11,7 @@ module.exports = (req, res) => {
     username: session.username,
     avatar: session.avatar,
     roleNames: session.roleNames,
+    roleIds: session.roleIds,
     perms: session.perms
   });
 };
