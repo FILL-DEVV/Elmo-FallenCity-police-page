@@ -373,6 +373,7 @@
   .misconduct-flag{color:#ff6b5e !important; font-weight:700;}
   .status-badge.sev-minor{background:rgba(217,154,31,0.16); color:var(--amber-deep); border-color:rgba(217,154,31,0.4);}
   .status-badge.sev-major{background:rgba(255,64,64,0.14); color:#ff6b5e; border-color:rgba(255,64,64,0.4);}
+  .status-badge.sev-critical{background:rgba(255,45,45,0.34); color:#fff; border-color:#ff2d2d; font-weight:700; letter-spacing:0.02em;}
   th.col-mctitle, td.cell-mctitle{width:240px;}
   tr.data-row td.cell-mctitle{white-space:normal; text-align:center;}
   tr.data-row td .mc-sub{display:block; color:var(--sub); font-size:0.7rem; font-family:'IBM Plex Mono', monospace; font-weight:400;}
@@ -541,17 +542,18 @@
             <span class="pill" id="entry-count-label-misconduct-records">0 officers</span>
             <div class="spacer"></div>
           </div>
-          <div class="rank-note">Approved misconduct per officer. 2 minor misconducts count as 1 major; an officer with 3 or more majors (counting that conversion) is shown in red here and on the roster.</div>
+          <div class="rank-note">Approved misconduct per officer. 2 minor misconducts count as 1 major and 1 critical counts as 3 majors; an officer with 3 or more majors (counting those conversions) — so a single Critical — is shown in red here and on the roster.</div>
           <div class="grid-scroll"><table class="grid">
             <thead>
               <tr>
                 <th class="colhead col-unit"><span class="letter">A</span><span class="fieldname">Officer</span></th>
                 <th class="colhead col-checklist"><span class="letter">B</span><span class="fieldname">Minor</span></th>
                 <th class="colhead col-checklist"><span class="letter">C</span><span class="fieldname">Major</span></th>
-                <th class="colhead col-checklist"><span class="letter">D</span><span class="fieldname">Counts as major</span></th>
-                <th class="colhead col-checklist"><span class="letter">E</span><span class="fieldname">Total</span></th>
-                <th class="colhead col-time"><span class="letter">F</span><span class="fieldname">Last issued</span></th>
-                <th class="colhead col-fto"><span class="letter">G</span><span class="fieldname">Flag</span></th>
+                <th class="colhead col-checklist"><span class="letter">D</span><span class="fieldname">Critical</span></th>
+                <th class="colhead col-checklist"><span class="letter">E</span><span class="fieldname">Counts as major</span></th>
+                <th class="colhead col-checklist"><span class="letter">F</span><span class="fieldname">Total</span></th>
+                <th class="colhead col-time"><span class="letter">G</span><span class="fieldname">Last issued</span></th>
+                <th class="colhead col-fto"><span class="letter">H</span><span class="fieldname">Flag</span></th>
               </tr>
             </thead>
             <tbody id="log-body-misconduct-records"></tbody>
@@ -736,8 +738,9 @@
         <select id="misconduct-severity-select">
           <option value="minor">Minor</option>
           <option value="major">Major</option>
+          <option value="critical">Critical</option>
         </select>
-        <div class="mc-hint">2 minor misconducts count as 1 major.</div>
+        <div class="mc-hint">2 minor misconducts count as 1 major, and 1 critical counts as 3 majors.</div>
       </div>
       <div class="mc-field">
         <label for="misconduct-details-input">Details</label>
@@ -2775,6 +2778,7 @@
   //   data is only ever loaded for people allowed to see it.
   // =====================================================================
   const MC_MINORS_PER_MAJOR = 2;
+  const MC_MAJORS_PER_CRITICAL = 3;
   const MC_FLAG_AT = 3;
   let misconductRecords = [];
   let misconductFlags = {};       // officerId -> effective majors, only for officers AT/OVER the flag threshold
@@ -2783,12 +2787,14 @@
   let mcNoticeTimer = null;
 
   function mcTally(list){
-    let minor = 0, major = 0;
+    let minor = 0, major = 0, critical = 0;
     list.forEach(r => {
       if(r.status !== 'approved') return;
-      if(r.severity === 'major') major++; else minor++;
+      if(r.severity === 'critical') critical++;
+      else if(r.severity === 'major') major++;
+      else minor++;
     });
-    return { minor, major, effective: major + Math.floor(minor / MC_MINORS_PER_MAJOR), total: minor + major };
+    return { minor, major, critical, effective: major + critical * MC_MAJORS_PER_CRITICAL + Math.floor(minor / MC_MINORS_PER_MAJOR), total: minor + major + critical };
   }
   function mcRebuildFlags(){
     const byOfficer = {};
@@ -2914,7 +2920,7 @@
     if(rows.length === 0){
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
-      tr.innerHTML = '<td colspan="7">' + (Object.keys(by).length === 0 ? 'No approved misconduct on record yet.' : 'No officers match this search.') + '</td>';
+      tr.innerHTML = '<td colspan="8">' + (Object.keys(by).length === 0 ? 'No approved misconduct on record yet.' : 'No officers match this search.') + '</td>';
       body.appendChild(tr);
       return;
     }
@@ -2926,6 +2932,7 @@
         <td class="cell-unit${flagged ? ' misconduct-flag' : ''}">${escapeHtml(o.name)}<span class="mc-sub">${escapeHtml(o.callsign || '')}</span></td>
         <td class="cell-checklist">${o.minor}</td>
         <td class="cell-checklist">${o.major}</td>
+        <td class="cell-checklist">${o.critical}</td>
         <td class="cell-checklist${flagged ? ' misconduct-flag' : ''}">${o.effective}</td>
         <td class="cell-checklist">${o.total}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(mcFmtDate(o.last))}</span></td>
