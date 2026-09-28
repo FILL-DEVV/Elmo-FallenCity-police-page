@@ -2381,14 +2381,33 @@
   document.getElementById('eoi-apply-cancel-btn').addEventListener('click', closeEoiApplyModal);
   eoiApplyOverlayEl.addEventListener('click', (ev) => { if(ev.target === eoiApplyOverlayEl) closeEoiApplyModal(); });
 
+  // Guards against double/triple clicks — the request does a rank
+  // lookup, a database insert and a Discord ping, so it takes a couple
+  // of seconds with no visible change, and people click again thinking
+  // it didn't go through. The button locks and says so until it settles.
+  let eoiApplySubmitting = false;
   document.getElementById('eoi-apply-submit-btn').addEventListener('click', async () => {
-    if(!eoiApplyCertKey) return;
+    if(!eoiApplyCertKey || eoiApplySubmitting) return;
+    eoiApplySubmitting = true;
+    const submitBtn = document.getElementById('eoi-apply-submit-btn');
+    const submitLabel = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
     const certKey = eoiApplyCertKey;
     const answers = {};
     eoiApplyQuestionsEl.querySelectorAll('textarea').forEach(t => { answers[t.dataset.qid] = t.value.trim(); });
-    await apiPost('/api/eoi/actions', { action: 'apply', certKey, answers });
-    closeEoiApplyModal();
-    await loadMyApplications();
+    try{
+      await apiPost('/api/eoi/actions', { action: 'apply', certKey, answers });
+      closeEoiApplyModal();
+      await loadMyApplications();
+    }catch(e){
+      // apiPost already showed the error; leave the modal open so the
+      // answers aren't lost and the person can retry.
+    }finally{
+      eoiApplySubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitLabel;
+    }
   });
 
   async function loadMyApplications(){
