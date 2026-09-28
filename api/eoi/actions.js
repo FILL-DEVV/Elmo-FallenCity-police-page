@@ -36,13 +36,19 @@ async function handleApply(req, res, session) {
   const cert = CERTIFICATIONS[certKey];
   if (!cert) return res.status(400).json({ error: 'Unknown certification' });
 
-  // Role-restricted certs (e.g. Bike Cert — Highway/TOU only) — checked
-  // against the session's own Discord role IDs from login, not
-  // anything the client sends. DOJ bypasses this, same as every other
-  // gate in the app.
-  if (cert.applyRoleIds && cert.applyRoleIds.length && !session.perms.isDOJ) {
+  // Role-restricted certs (e.g. Bike Cert — Highway/TOU members or
+  // Chief Inspector and above) — holding ANY listed role ID or ANY
+  // listed role name is enough. Checked against the session's own
+  // Discord roles from login, not anything the client sends. DOJ
+  // bypasses this, same as every other gate in the app.
+  const requiredIds = cert.applyRoleIds || [];
+  const requiredNames = (cert.applyRoleNames || []).map((n) => String(n).toLowerCase());
+  if ((requiredIds.length || requiredNames.length) && !session.perms.isDOJ) {
     const sessionRoleIds = session.roleIds || [];
-    const eligible = cert.applyRoleIds.some((id) => sessionRoleIds.includes(id));
+    const sessionRoleNames = (session.roleNames || []).map((n) => String(n).toLowerCase());
+    const eligible =
+      requiredIds.some((id) => sessionRoleIds.includes(id)) ||
+      requiredNames.some((n) => sessionRoleNames.includes(n));
     if (!eligible) {
       return res.status(403).json({ error: 'You do not hold the required role to apply for this certification.' });
     }
