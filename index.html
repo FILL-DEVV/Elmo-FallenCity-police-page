@@ -2314,6 +2314,16 @@
     renderEoiReview();
   }
 
+  // True if this session can apply for a cert with applyRoleIds set —
+  // holding any one of the listed roles, or DOJ. No applyRoleIds means
+  // everyone (rank-eligible) can apply.
+  function eoiCertApplyEligible(cert){
+    if(!cert.applyRoleIds || cert.applyRoleIds.length === 0) return true;
+    const p = currentUser.perms || {};
+    if(p.isDOJ) return true;
+    const myRoleIds = currentUser.roleIds || [];
+    return cert.applyRoleIds.some(id => myRoleIds.includes(id));
+  }
   function renderEoiCertList(){
     const container = document.getElementById('eoi-cert-list');
     if(!container) return;
@@ -2325,12 +2335,13 @@
     eoiCatalogue.forEach(cert => {
       const card = document.createElement('div');
       card.className = 'eoi-cert-card';
+      const eligible = eoiCertApplyEligible(cert);
       card.innerHTML = `
         <div class="eoi-cert-title">${escapeHtml(cert.label)}</div>
         <div class="eoi-cert-rank">${escapeHtml(cert.minRankNote || '')}</div>
-        <button class="btn primary" type="button">Apply</button>
+        ${eligible ? '<button class="btn primary" type="button">Apply</button>' : '<div style="color:var(--sub); font-size:0.74rem;">Not open to your current division.</div>'}
       `;
-      card.querySelector('button').addEventListener('click', () => openEoiApplyModal(cert.key));
+      if(eligible) card.querySelector('button').addEventListener('click', () => openEoiApplyModal(cert.key));
       container.appendChild(card);
     });
   }
