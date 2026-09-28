@@ -22,10 +22,14 @@ const APPROVAL_CHANNEL_ID = '1554062368818856026';
 const APPROVAL_ROLE_ID = '1445015107255013396';
 const SITE_URL = 'https://www.fallenpd.com';
 
-// 2 minor misconducts count as 1 major; 3 majors (counting that
-// conversion) flags an officer. Only APPROVED records count — pending
-// and denied ones are logged but never counted against anyone.
+// Severities: minor < major < critical. 2 minor misconducts count as 1
+// major, and 1 critical counts as MAJORS_PER_CRITICAL majors; an officer
+// whose total (counting those conversions) reaches 3 majors is flagged.
+// Only APPROVED records count — pending and denied ones are logged but
+// never counted against anyone.
+const SEVERITIES = ['minor', 'major', 'critical'];
 const MINORS_PER_MAJOR = 2;
+const MAJORS_PER_CRITICAL = 3;
 const FLAG_AT_EFFECTIVE_MAJORS = 3;
 
 const TITLE_MAX = 100;
@@ -47,13 +51,15 @@ function misconductPerms(session) {
 function tally(rows) {
   let minor = 0;
   let major = 0;
+  let critical = 0;
   (rows || []).forEach((r) => {
     if (r.status && r.status !== 'approved') return;
-    if (r.severity === 'major') major++;
+    if (r.severity === 'critical') critical++;
+    else if (r.severity === 'major') major++;
     else minor++;
   });
-  const effective = major + Math.floor(minor / MINORS_PER_MAJOR);
-  return { minor, major, effective, flagged: effective >= FLAG_AT_EFFECTIVE_MAJORS };
+  const effective = major + critical * MAJORS_PER_CRITICAL + Math.floor(minor / MINORS_PER_MAJOR);
+  return { minor, major, critical, effective, flagged: effective >= FLAG_AT_EFFECTIVE_MAJORS };
 }
 
 // The roster's "Discord ID" column is free text; only a real numeric
@@ -64,7 +70,7 @@ function pingableId(raw) {
 }
 
 function sevLabel(severity) {
-  return severity === 'major' ? 'Major' : 'Minor';
+  return severity === 'critical' ? 'Critical' : severity === 'major' ? 'Major' : 'Minor';
 }
 
 function clip(text, max) {
@@ -84,9 +90,12 @@ function buildMisconductMessage(row, totals) {
   if (row.reviewed_by && row.reviewed_by !== row.created_by) {
     fields.push({ name: 'Approved by', value: clip(row.reviewed_by, 1000), inline: true });
   }
+  const parts = [totals.minor + ' minor', totals.major + ' major'];
+  if (totals.critical) parts.push(totals.critical + ' critical');
   fields.push({
     name: 'Record',
-    value: totals.minor + ' minor · ' + totals.major + ' major · ' + totals.effective + ' counted as major' + (totals.effective === 1 ? '' : 's') + ' (' + MINORS_PER_MAJOR + ' minors = 1 major)'
+    value: parts.join(' · ') + ' · ' + totals.effective + ' counted as major' + (totals.effective === 1 ? '' : 's') +
+      ' (' + MINORS_PER_MAJOR + ' minors = 1 major' + (totals.critical ? '; 1 critical = ' + MAJORS_PER_CRITICAL + ' majors' : '') + ')'
   });
   if (totals.flagged) {
     fields.push({ name: 'Notice', value: 'This officer now has ' + FLAG_AT_EFFECTIVE_MAJORS + ' or more major misconducts on record.' });
@@ -103,7 +112,7 @@ function buildMisconductMessage(row, totals) {
     embeds: [{
       title: clip(label + ' misconduct — ' + row.title, 250),
       description: clip(row.details, 4000),
-      color: row.severity === 'major' ? 0xe06a5f : 0xd99a1f,
+      color: row.severity === 'critical' ? 0xc62828 : row.severity === 'major' ? 0xe06a5f : 0xd99a1f,
       fields,
       footer: { text: 'FallenPD Roster' },
       timestamp: new Date().toISOString()
@@ -163,13 +172,13 @@ async function handleCreate(req, res, session) {
   }
 
   const body = req.body || {};
-  const severity = body.severity === 'major' ? 'major' : body.severity === 'minor' ? 'minor' : null;
+  const severity = SEVERITIES.includes(body.severity) ? body.severity : null;
   const title = String(body.title || '').trim();
   const details = String(body.details || '').trim();
   const officerId = String(body.officerId || '').trim();
 
   if (!officerId) return res.status(400).json({ error: 'Choose an officer.' });
-  if (!severity) return res.status(400).json({ error: 'Choose whether this is a minor or major misconduct.' });
+  if (!severity) return res.status(400).json({ error: 'Choose a severity: minor, major or critical.' });
   if (!title) return res.status(400).json({ error: 'Enter a title for the misconduct.' });
   if (title.length > TITLE_MAX) return res.status(400).json({ error: 'Title must be ' + TITLE_MAX + ' characters or fewer.' });
   if (!details) return res.status(400).json({ error: 'Enter the misconduct details.' });
