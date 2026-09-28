@@ -2314,15 +2314,19 @@
     renderEoiReview();
   }
 
-  // True if this session can apply for a cert with applyRoleIds set —
-  // holding any one of the listed roles, or DOJ. No applyRoleIds means
+  // True if this session can apply for a cert with applyRoleIds /
+  // applyRoleNames set — holding any one listed role ID or any one
+  // listed role name (case-insensitive), or DOJ. Neither list set means
   // everyone (rank-eligible) can apply.
   function eoiCertApplyEligible(cert){
-    if(!cert.applyRoleIds || cert.applyRoleIds.length === 0) return true;
+    const ids = cert.applyRoleIds || [];
+    const names = (cert.applyRoleNames || []).map(n => String(n).toLowerCase());
+    if(ids.length === 0 && names.length === 0) return true;
     const p = currentUser.perms || {};
     if(p.isDOJ) return true;
     const myRoleIds = currentUser.roleIds || [];
-    return cert.applyRoleIds.some(id => myRoleIds.includes(id));
+    const myRoleNames = (currentUser.roleNames || []).map(n => String(n).toLowerCase());
+    return ids.some(id => myRoleIds.includes(id)) || names.some(n => myRoleNames.includes(n));
   }
   function renderEoiCertList(){
     const container = document.getElementById('eoi-cert-list');
