@@ -28,6 +28,12 @@ const EDIT_INFO_ROLES = [
 // the Promote, Terminate, and Add Officer buttons, but not the rest of
 // TIER1's access (roster import, clear all, terminated records).
 const INCREMENTAL_SERGEANT_ROLES = ['incremental sergeant'];
+// Misconduct approvers — Superintendent and above. (Sending/viewing
+// misconduct is open to Incremental Sergeant and above, i.e. canPromoteAny.)
+const MISCONDUCT_APPROVER_ROLES = [
+  'superintendent', 'chief superintendent',
+  'assistant commissioner', 'deputy commissioner', 'commissioner'
+];
 // EOIs tab visibility — matched by role ID rather than name (unlike
 // every other check on this page) since this role's exact name wasn't
 // given, only its ID; ID matching is also immune to the role later
@@ -61,6 +67,7 @@ function computePermissions(roleNames, roleIds) {
   const isDOJ = has(DOJ_ROLES);         // Department of Justice — sees/does everything
   const editInfo = has(EDIT_INFO_ROLES); // Superintendent and above
   const incrementalSgt = has(INCREMENTAL_SERGEANT_ROLES); // Incremental Sergeant
+  const misconductApprover = has(MISCONDUCT_APPROVER_ROLES); // Superintendent and above
   const inTou = hasIds(TOU_MEMBER_ROLE_IDS);
   const inHighway = hasIds(HIGHWAY_MEMBER_ROLE_IDS);
   const inCrime = hasIds(CRIME_MEMBER_ROLE_IDS);
@@ -110,7 +117,12 @@ function computePermissions(roleNames, roleIds) {
     canReviewSrcmd: highCommand || isDOJ,
     // FTO tab — FTO Supervisor and above only (not Senior FTO or plain
     // FTO): a narrower slice than the Academy tab's tier3 audience.
-    canReviewFto: ftoSupervisorPlus || highCommand || isDOJ
+    canReviewFto: ftoSupervisorPlus || highCommand || isDOJ,
+    // Misconduct — Incremental Sergeant and above (any division) can
+    // send and see the log; Superintendent and above (or DOJ) approve.
+    canSendMisconduct: canPromoteAny,
+    canViewMisconduct: canPromoteAny,
+    canApproveMisconduct: misconductApprover || isDOJ
   };
 }
 
