@@ -88,11 +88,24 @@ async function handleApply(req, res, session) {
     status: 'pending',
     created: Date.now()
   };
-  await sbFetch('/eoi_applications', {
-    method: 'POST',
-    body: row,
-    extraHeaders: { Prefer: 'return=minimal' }
-  });
+  // The check above can't stop several near-simultaneous requests (a
+  // double/triple click) from all passing it before the first insert
+  // lands. The database's own unique index on (cert_key, applicant_id)
+  // for pending rows is what actually guarantees one — a losing request
+  // gets a unique-violation back here and is turned into the same
+  // friendly "already pending" message instead of a generic failure.
+  try {
+    await sbFetch('/eoi_applications', {
+      method: 'POST',
+      body: row,
+      extraHeaders: { Prefer: 'return=minimal' }
+    });
+  } catch (e) {
+    if (/\b409\b|23505|duplicate key/i.test(String((e && e.message) || ''))) {
+      return res.status(400).json({ error: 'You already have a pending application for this certification.' });
+    }
+    throw e;
+  }
 
   // Optional — only certs with both fields set ping anyone on submit.
   // notifyRoleId may be a single role ID or an array of them (pings
