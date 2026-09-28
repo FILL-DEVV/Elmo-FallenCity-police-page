@@ -50,11 +50,13 @@
 //   Acknowledge button. Optional — falls back to a generic "your
 //   application for X has been accepted" line if omitted. Plain text;
 //   Discord markdown (**bold**, *italic*, etc.) works.
-// - applyRoleIds: array of Discord role IDs — holding ANY one of them
-//   is required to apply for this cert. Checked both server-side (on
+// - applyRoleIds / applyRoleNames: who may apply. Holding ANY one of
+//   the listed Discord role IDs (applyRoleIds) OR any one of the listed
+//   role names (applyRoleNames, matched case-insensitively) is enough —
+//   the two lists combine as "either". Checked both server-side (on
 //   submit) and client-side (hides the Apply button for anyone who
 //   doesn't qualify, replaced with a short note instead). Optional —
-//   omit to let any rank-eligible applicant apply (a DOJ session
+//   omit both to let any rank-eligible applicant apply (a DOJ session
 //   always bypasses this check, same as elsewhere in the app).
 const CERTIFICATIONS = {
   polair: {
@@ -198,10 +200,16 @@ const CERTIFICATIONS = {
     minRank: 'Constable',
     // Filed under Highway Patrol.
     division: 'highway',
-    // Open to Highway Patrol and TOU members only — the same blanket
-    // membership role IDs used elsewhere (roleSync.js's
-    // DIVISION_WIDE_ROLE_IDS, permissions.js's HIGHWAY/TOU_MEMBER_ROLE_IDS).
+    // Open to Highway Patrol and TOU members (the same blanket
+    // membership role IDs used elsewhere — roleSync.js's
+    // DIVISION_WIDE_ROLE_IDS, permissions.js's HIGHWAY/TOU_MEMBER_ROLE_IDS)
+    // OR anyone holding a Chief Inspector-and-above rank role, whatever
+    // their division.
     applyRoleIds: ['1525135429643276349', '1525135421271441458'],
+    applyRoleNames: [
+      'Chief Inspector', 'Superintendent', 'Chief Superintendent',
+      'Assistant Commissioner', 'Deputy Commissioner', 'Commissioner'
+    ],
     questions: [
       {
         id: 'q1',
@@ -257,6 +265,7 @@ function buildPublicCatalogue() {
     minRankNote: cert.minRankNote || '',
     division: cert.division || 'general',
     applyRoleIds: cert.applyRoleIds || null,
+    applyRoleNames: cert.applyRoleNames || null,
     questions: cert.questions.map((q) => ({
       id: q.id,
       label: q.label,
