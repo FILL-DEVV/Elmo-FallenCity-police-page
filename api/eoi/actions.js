@@ -4,6 +4,7 @@ const { CERTIFICATIONS, buildPublicCatalogue, EOI_CHANNEL_ID } = require('../_li
 const { createPrivateThread, addThreadMember, sendChannelPayload, deleteChannelMessage } = require('../_lib/discord');
 const { canReviewApplicationDivision } = require('../_lib/permissions');
 const { meetsMinRank } = require('../_lib/ranks');
+const misconduct = require('../_lib/misconduct');
 
 // Handles the whole website-based EOI flow in one function (kept
 // together deliberately — Vercel's Hobby plan caps at 12 serverless
@@ -13,6 +14,9 @@ const { meetsMinRank } = require('../_lib/ranks');
 //   GET                                         -> the public certification catalogue
 //   POST { action: 'apply', certKey, answers }   -> submit an application
 //   POST { action: 'review', applicationId, decision } -> staff Accept/Deny
+//   POST { action: 'misconduct-create' | 'misconduct-review' | 'misconduct-list' }
+//        -> the misconduct system (logic lives in _lib/misconduct.js; it's
+//        routed through here only because the project is at the function cap)
 
 function validateAnswers(cert, answers) {
   answers = answers || {};
@@ -278,6 +282,9 @@ module.exports = async (req, res) => {
     if (action === 'apply') return await handleApply(req, res, session);
     if (action === 'review') return await handleReview(req, res, session);
     if (action === 'post-eoi-announcement') return await handlePostAnnouncement(req, res, session);
+    if (action === 'misconduct-create') return await misconduct.handleCreate(req, res, session);
+    if (action === 'misconduct-review') return await misconduct.handleReview(req, res, session);
+    if (action === 'misconduct-list') return await misconduct.handleList(req, res, session);
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     console.error('eoi action "' + action + '" failed:', err);
