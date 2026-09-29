@@ -76,9 +76,13 @@ function computePermissions(roleNames, roleIds) {
 
   return {
     tier1, tier2, tier3, highCommand, isDOJ,
-    // Add, Promote, and Terminate are also open to Incremental Sergeant,
-    // one tier below the rest of TIER1's access.
-    canAdd: tier1 || tier2 || incrementalSgt || isDOJ,
+    // Add and Terminate are also open to Incremental Sergeant, one tier
+    // below the rest of TIER1's access. Plain FTO (tier2) does NOT get
+    // Add — every add now only ever creates a student (see add.js),
+    // and granting a brand-new student a starting role set is treated
+    // as a promotion-adjacent action, gated the same as canPromoteAny
+    // rather than the FTO tier.
+    canAdd: tier1 || incrementalSgt || isDOJ,
     canTerminate: tier1 || incrementalSgt || isDOJ,
     canPromoteAny,
     // Tier 3 (Senior FTO+) can additionally promote officers whose
