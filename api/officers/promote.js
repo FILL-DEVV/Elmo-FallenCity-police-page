@@ -84,11 +84,14 @@ module.exports = async (req, res) => {
     });
 
     if (logEntry) {
-      // The promoting officer's name comes from the verified session,
-      // never from the client, so it can't be spoofed.
+      // The promoting officer's name AND Discord ID both come from the
+      // verified session, never from the client, so neither can be
+      // spoofed. promoted_by_id lets staff pin the log entry to an exact
+      // Discord account rather than just a display name (which can change
+      // or collide between two members).
       await sbFetch('/promotion_log', {
         method: 'POST',
-        body: { ...logEntry, promoted_by: session.username },
+        body: { ...logEntry, promoted_by: session.username, promoted_by_id: session.id },
         extraHeaders: { Prefer: 'return=minimal' }
       });
 
