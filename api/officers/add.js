@@ -46,10 +46,13 @@ module.exports = async (req, res) => {
     // Log this addition into the same table (and Promotion logs tab)
     // promotions use, so every new roster row is traceable to who added
     // it — not just this row's own promo display field, which a later
-    // promotion would overwrite anyway. from_rank/from_division are left
-    // null as the "this was a brand-new add, not a promotion" marker;
-    // the frontend renders that as "New addition". Best-effort — a
-    // logging failure never blocks the add itself.
+    // promotion would overwrite anyway. promoted_by_id is the ADDER's own
+    // Discord ID (the person who actually clicked Add officer), taken
+    // from the verified session — never the ID of the officer being
+    // added, and never trusted from the client. from_rank/from_division
+    // are left null as the "this was a brand-new add, not a promotion"
+    // marker; the frontend renders that as "New addition". Best-effort —
+    // a logging failure never blocks the add itself.
     try {
       await sbFetch('/promotion_log', {
         method: 'POST',
@@ -62,6 +65,7 @@ module.exports = async (req, res) => {
           to_rank: entry.rank,
           to_division: divisionLabel || '',
           promoted_by: session.username,
+          promoted_by_id: session.id,
           date: entry.time || null,
           created: Date.now()
         },
