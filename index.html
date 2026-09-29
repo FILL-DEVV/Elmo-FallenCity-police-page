@@ -608,7 +608,7 @@
             <span class="pill" id="entry-count-label-promotions">0 rows</span>
             <div class="spacer"></div>
           </div>
-          <div class="rank-note">Every rank or division change made through the Promote popover, logged automatically — newest first. This is a history, not an editable roster.</div>
+          <div class="rank-note">Every rank or division change made through the Promote popover, and every new officer added, logged automatically — newest first. This is a history, not an editable roster.</div>
           <div class="grid-scroll"><table class="grid">
             <thead>
               <tr>
@@ -2424,11 +2424,15 @@
     }
     const sorted = promotionLog.slice().sort((a, b) => b.created - a.created);
     sorted.forEach(p => {
+      // A brand-new officer add (api/officers/add.js) logs here too, with
+      // fromRank/fromDivision left blank as the "no prior rank" marker —
+      // shown as "New addition" rather than a misleading "null — null".
+      const fromLabel = p.fromRank ? (p.fromRank + ' — ' + (p.fromDivision || '—')) : 'New addition';
       const tr = document.createElement('tr');
       tr.className = 'data-row';
       tr.innerHTML = `
         <td class="cell-unit">${escapeHtml(p.name)} <span style="color:var(--sub); font-size:0.7rem;">(${escapeHtml(p.callsign || '')})</span></td>
-        <td class="cell-unit">${escapeHtml(p.fromRank)} — ${escapeHtml(p.fromDivision)}</td>
+        <td class="cell-unit">${escapeHtml(fromLabel)}</td>
         <td class="cell-promo">${escapeHtml(p.toRank)} — ${escapeHtml(p.toDivision)}</td>
         <td class="cell-unit">${escapeHtml(p.promotedBy || '—')}</td>
         <td class="cell-time"><span class="cell-time-text">${escapeHtml(fmtTime(p.date))}</span></td>
