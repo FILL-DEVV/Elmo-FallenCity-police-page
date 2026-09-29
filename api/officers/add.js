@@ -29,12 +29,47 @@ module.exports = async (req, res) => {
   if (!entry.id || !entry.list_key || !entry.callsign) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+
+  // promo (the roster's "Promotion officer" column) is stamped from the
+  // verified session, never trusted from the client — same as
+  // promote.js — so it can't be left blank or spoofed by whatever the
+  // Add form's free-text field happened to contain.
+  entry.promo = session.username;
+
   try {
     await sbFetch('/officers', {
       method: 'POST',
       body: entry,
       extraHeaders: { Prefer: 'return=minimal' }
     });
+
+    // Log this addition into the same table (and Promotion logs tab)
+    // promotions use, so every new roster row is traceable to who added
+    // it — not just this row's own promo display field, which a later
+    // promotion would overwrite anyway. from_rank/from_division are left
+    // null as the "this was a brand-new add, not a promotion" marker;
+    // the frontend renders that as "New addition". Best-effort — a
+    // logging failure never blocks the add itself.
+    try {
+      await sbFetch('/promotion_log', {
+        method: 'POST',
+        body: {
+          id: 'a' + Date.now() + Math.random().toString(36).slice(2, 7),
+          name: entry.unit || entry.callsign,
+          callsign: entry.callsign,
+          from_rank: null,
+          from_division: null,
+          to_rank: entry.rank,
+          to_division: divisionLabel || '',
+          promoted_by: session.username,
+          date: entry.time || null,
+          created: Date.now()
+        },
+        extraHeaders: { Prefer: 'return=minimal' }
+      });
+    } catch (logErr) {
+      console.error('Could not log new officer addition:', logErr);
+    }
 
     // Assign their starting Discord role. Never blocks the add if it
     // fails (missing role, no Discord ID, etc).
