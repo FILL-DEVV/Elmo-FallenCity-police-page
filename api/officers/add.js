@@ -36,6 +36,13 @@ module.exports = async (req, res) => {
   // Add form's free-text field happened to contain.
   entry.promo = session.username;
 
+  // Add can now only ever create a brand-new student — never trusted
+  // from the client (the rank <select> is UI-only and can be bypassed
+  // by calling this endpoint directly), so it's forced here regardless
+  // of what the request sent. Promoting a student to a real rank is a
+  // separate, already-gated action (see promote.js).
+  entry.rank = 'student';
+
   try {
     await sbFetch('/officers', {
       method: 'POST',
