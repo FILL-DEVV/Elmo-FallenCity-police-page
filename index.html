@@ -2065,13 +2065,13 @@
   }
 
   DIVISION_KEYS.forEach(key => {
-    const div = DIVISIONS[key];
     const rankSelect = document.getElementById('f-rank-' + key);
-    div.ranks.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r; opt.textContent = r;
-      rankSelect.appendChild(opt);
-    });
+    // Add only ever creates a student now (server-enforced in add.js —
+    // this select existing at all is just so the row keeps its normal
+    // layout; it's the server, not this list, that's the real gate).
+    const addRankOpt = document.createElement('option');
+    addRankOpt.value = 'student'; addRankOpt.textContent = 'student';
+    rankSelect.appendChild(addRankOpt);
 
     rankSelect.addEventListener('change', () => {
       const callsignField = document.getElementById('f-callsign-' + key);
