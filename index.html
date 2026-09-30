@@ -1619,10 +1619,6 @@
             <label>Inducted date</label>
             <input id="f-time-${key}" type="date">
           </div>
-          <div class="qcell">
-            <label>Promotion officer</label>
-            <input id="f-promo-${key}" placeholder="J. Doe" autocomplete="off">
-          </div>
         </div>
         <div class="quickadd-add-row">
           <button class="btn primary" id="add-btn-${key}" type="button">Add officer</button>
@@ -2037,7 +2033,6 @@
     const rankField = document.getElementById('f-rank-' + divKey);
     const unitField = document.getElementById('f-unit-' + divKey);
     const discordField = document.getElementById('f-discord-' + divKey);
-    const promoField = document.getElementById('f-promo-' + divKey);
     const timeField = document.getElementById('f-time-' + divKey);
     const callsign = callsignField.value.trim();
     if(!callsign) return;
@@ -2047,7 +2042,6 @@
       rank: rankField.value,
       unit: unitField.value.trim(),
       discord: discordField.value.trim(),
-      promo: promoField.value.trim(),
       time: timeField.value || todayStr(),
       fto: '',
       created: Date.now()
@@ -2055,7 +2049,6 @@
     const rankVal = rankField.value;
     unitField.value = '';
     discordField.value = '';
-    promoField.value = '';
     timeField.value = '';
     callsignField.focus();
     callsignField.select();
