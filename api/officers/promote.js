@@ -1,4 +1,5 @@
 const { getSession } = require('../_lib/session');
+const { getLivePerms } = require('../_lib/liveAuth');
 const { sbFetch } = require('../_lib/supabase');
 const { sendChannelMessage } = require('../_lib/discord');
 const { syncRankRole, syncMilestoneRoles } = require('../_lib/roleSync');
@@ -19,6 +20,17 @@ module.exports = async (req, res) => {
   const { id, listKey, callsign, rank, time, logEntry, toDivisionLabel } = req.body || {};
   if (!id || !listKey || !rank) return res.status(400).json({ error: 'Missing required fields' });
 
+  // See liveAuth.js — session.perms is cached at login for up to 7
+  // days, so a stripped role wouldn't otherwise take effect until the
+  // person's next login.
+  let livePerms;
+  try {
+    livePerms = await getLivePerms(session);
+  } catch (err) {
+    console.error('Could not verify live Discord roles for promote:', err);
+    return res.status(503).json({ error: 'Could not verify your permissions right now — try again' });
+  }
+
   try {
     // Read the officer's CURRENT record before authorizing or overwriting
     // it — both the permission check below and the announcement/role
@@ -38,9 +50,9 @@ module.exports = async (req, res) => {
     // the officer's real current rank/division from the database, not
     // from the client, so this can't be bypassed by lying in the request.
     const isStudentPromotion = beforeRow.rank === 'student';
-    const allowed = session.perms.canPromoteAny || (isStudentPromotion && session.perms.canPromoteStudent);
+    const allowed = livePerms.canPromoteAny || (isStudentPromotion && livePerms.canPromoteStudent);
     if (!allowed) return res.status(403).json({ error: 'You do not have permission to promote this officer' });
-    if (!session.perms.canPromoteAny) {
+    if (!livePerms.canPromoteAny) {
       if (rank !== 'Probationary Constable' || listKey !== beforeRow.list_key) {
         return res.status(403).json({ error: 'You may only promote students to Probationary Constable in their current division' });
       }

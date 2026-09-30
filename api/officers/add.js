@@ -1,4 +1,5 @@
 const { getSession } = require('../_lib/session');
+const { getLivePerms } = require('../_lib/liveAuth');
 const { sbFetch } = require('../_lib/supabase');
 const { syncRankRole, syncMilestoneRoles } = require('../_lib/roleSync');
 const { sendChannelMessage, addMemberRole, removeMemberRole } = require('../_lib/discord');
@@ -21,7 +22,20 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Not logged in' });
-  if (!session.perms.canAdd) return res.status(403).json({ error: 'You do not have permission to add officers' });
+
+  // Never trust session.perms here — it's baked into the cookie at
+  // login and can be up to 7 days stale. Re-check against this
+  // person's CURRENT Discord roles so a stripped role (or a kick from
+  // the server) takes effect immediately, not whenever they next log
+  // in. See liveAuth.js for why.
+  let livePerms;
+  try {
+    livePerms = await getLivePerms(session);
+  } catch (err) {
+    console.error('Could not verify live Discord roles for add:', err);
+    return res.status(503).json({ error: 'Could not verify your permissions right now — try again' });
+  }
+  if (!livePerms.canAdd) return res.status(403).json({ error: 'You do not have permission to add officers' });
 
   // divisionLabel is only used for the announcement below — it isn't an
   // officers table column, so it's split out before the insert.
