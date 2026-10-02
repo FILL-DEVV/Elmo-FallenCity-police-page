@@ -206,12 +206,16 @@ async function archiveThread(threadId, botToken) {
 // remove the private EOI acknowledgement thread once the applicant has
 // acknowledged, since it's served its purpose and there's nothing in it
 // worth keeping around.
+// 404 is treated as success, same reasoning as deleteChannelMessage above
+// — the scheduled termination-thread cleanup job calls this, and a
+// thread someone already deleted by hand shouldn't make that job treat
+// the cleanup as failed and keep retrying it forever.
 async function deleteThread(threadId, botToken) {
   const res = await discordFetch(`${DISCORD_API}/channels/${threadId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bot ${botToken}` }
   });
-  if (!res.ok) throw new Error('Failed to delete thread: ' + res.status + ' ' + (await res.text()));
+  if (!res.ok && res.status !== 404) throw new Error('Failed to delete thread: ' + res.status + ' ' + (await res.text()));
 }
 
 async function addMemberRole(guildId, userId, roleId, botToken) {

@@ -100,6 +100,24 @@ module.exports = async (req, res) => {
           process.env.DISCORD_BOT_TOKEN,
           'Termination notice — ' + (beforeRow.callsign || officerName)
         );
+
+        // Track it so the scheduled cleanup job (api/cron/cleanup-
+        // termination-threads.js) can delete it once it's 48 hours
+        // old — Discord has no built-in "delete this thread later",
+        // only archive-duration options, none of which land on 48h.
+        // Tracked separately from the notification itself below so a
+        // tracking-write failure never stops the officer from getting
+        // notified.
+        try {
+          await sbFetch('/termination_threads', {
+            method: 'POST',
+            body: { id: thread.id, created: Date.now() },
+            extraHeaders: { Prefer: 'return=minimal' }
+          });
+        } catch (trackErr) {
+          console.error('Could not track termination thread for scheduled cleanup:', trackErr);
+        }
+
         await addThreadMember(thread.id, beforeRow.discord, process.env.DISCORD_BOT_TOKEN);
         await sendChannelPayload(thread.id, process.env.DISCORD_BOT_TOKEN, {
           content: `<@${beforeRow.discord}>`,
