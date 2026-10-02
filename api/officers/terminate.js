@@ -10,6 +10,15 @@ const {
 // https://discord.com/channels/1401963000935485600/1524244391974404126
 const ROLE_REQUEST_CHANNEL_ID = '1524244391974404126';
 
+// Parent channel for the termination private thread — deliberately NOT
+// ROLE_REQUEST_CHANNEL_ID. That channel is locked behind a staff role,
+// and a private thread is only visible to people who can already see
+// its parent channel; the officer being terminated just had every
+// role (and with it, access to that channel) stripped, so a thread
+// under it would be invisible to them. This channel must be visible to
+// @everyone for the notification to actually reach them.
+const TERMINATION_THREAD_CHANNEL_ID = '1524244190203220139';
+
 function isDiscordId(v) {
   return typeof v === 'string' && /^\d{15,25}$/.test(v);
 }
@@ -87,7 +96,7 @@ module.exports = async (req, res) => {
     if (hasDiscordId) {
       try {
         const thread = await createPrivateThread(
-          ROLE_REQUEST_CHANNEL_ID,
+          TERMINATION_THREAD_CHANNEL_ID,
           process.env.DISCORD_BOT_TOKEN,
           'Termination notice — ' + (beforeRow.callsign || officerName)
         );
