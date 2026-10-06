@@ -5,6 +5,7 @@ const { createPrivateThread, addThreadMember, sendChannelPayload, deleteChannelM
 const { canReviewApplicationDivision } = require('../_lib/permissions');
 const { meetsMinRank } = require('../_lib/ranks');
 const misconduct = require('../_lib/misconduct');
+const { handleCleanup } = require('../_lib/terminationCleanup');
 
 // Handles the whole website-based EOI flow in one function (kept
 // together deliberately — Vercel's Hobby plan caps at 12 serverless
@@ -278,6 +279,9 @@ async function handlePostAnnouncement(req, res, session) {
 
 module.exports = async (req, res) => {
   if (req.method === 'GET') {
+    // Vercel Cron hits this with GET + ?job=... (see vercel.json) — kept
+    // here rather than its own api/ file because of the 12-function cap.
+    if (req.query && req.query.job === 'cleanup-termination-threads') return handleCleanup(req, res);
     return res.status(200).json({ certifications: buildPublicCatalogue() });
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

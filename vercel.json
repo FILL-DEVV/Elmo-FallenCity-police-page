@@ -1,5 +1,5 @@
 {
   "crons": [
-    { "path": "/api/cron/cleanup-termination-threads", "schedule": "0 0 * * *" }
+    { "path": "/api/eoi/actions?job=cleanup-termination-threads", "schedule": "0 0 * * *" }
   ]
 }
