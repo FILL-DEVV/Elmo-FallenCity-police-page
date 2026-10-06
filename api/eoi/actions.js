@@ -63,16 +63,24 @@ async function handleApply(req, res, session) {
   // doesn't hold. DOJ bypasses this, same as it bypasses every other
   // gate in the app.
   if (cert.minRank && !session.perms.isDOJ) {
+    // Every non-terminated roster row tied to this Discord ID, not just
+    // the newest one — a person can legitimately have more than one
+    // (e.g. a leftover or re-added entry sitting alongside their real
+    // one), and judging them by whichever row happens to be newest
+    // would reject a genuinely qualified applicant on a junk row.
     const officerRows = await sbFetch(
-      `/officers?discord=eq.${encodeURIComponent(session.id)}&list_key=neq.terminated&select=rank&order=created.desc&limit=1`,
+      `/officers?discord=eq.${encodeURIComponent(session.id)}&list_key=neq.terminated&select=rank`,
       { extraHeaders: { Prefer: 'return=representation' } }
     );
-    const officer = officerRows && officerRows[0];
-    if (!officer) {
+    if (!officerRows || officerRows.length === 0) {
       return res.status(400).json({ error: 'We could not find your officer record on file — make sure your Discord ID is set correctly on your roster entry, or contact staff.' });
     }
-    if (!meetsMinRank(officer.rank, cert.minRank)) {
-      return res.status(400).json({ error: 'You must be at least ' + cert.minRank + ' to apply for this certification.' });
+    if (!officerRows.some((o) => meetsMinRank(o.rank, cert.minRank))) {
+      // Names the rank(s) actually on file so a wrong or unrecognized
+      // roster rank is obvious from the message itself instead of
+      // looking identical to a genuine rank shortfall.
+      const onFile = officerRows.map((o) => o.rank || 'blank').join(', ');
+      return res.status(400).json({ error: 'You must be at least ' + cert.minRank + ' to apply for this certification. (Your roster entry shows: ' + onFile + ')' });
     }
   }
 
